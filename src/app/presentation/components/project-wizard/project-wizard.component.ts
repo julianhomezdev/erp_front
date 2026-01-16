@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component,  OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Employee } from '../../../domain/Entities/employee/employee.model';
@@ -9,7 +9,14 @@ import { EmployeeService } from '../../../core/services/employee.service';
 import { EquipmentService } from '../../../core/services/equipment.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ProjectCreationService } from '../../../core/services/project-creation.service';
+import { ClientService } from '../../../core/services/client.service';
 import { Equipment } from '../../../domain/Entities/Equipment/equipment.model';
+import { Client } from '../../../domain/Entities/client/client.model';
+import { ProjectCoordinatorService } from '../../../core/services/project-coordinator.service';
+import { Coordinator } from '../../../domain/Entities/coordinator/coordinator.model';
+import { Location as ProjectLocation } from '../../../domain/Entities/location/location.model';
+import { LocationService } from '../../../core/services/location.service';
+
 
 interface WizardStep {
   id: number;
@@ -32,7 +39,11 @@ export class ProjectWizardComponent implements OnInit {
   private employeeService = inject(EmployeeService);
   private equipmentService = inject(EquipmentService);
   private vehicleService = inject(VehicleService);
+  private clientService =  inject(ClientService);
+  private projectCoordService = inject(ProjectCoordinatorService);
+  private locationService = inject(LocationService);
   private projectCreationService = inject(ProjectCreationService);
+  
   
   currentStep = 1;
   loading = false;
@@ -47,6 +58,10 @@ export class ProjectWizardComponent implements OnInit {
   resourcesForm!: FormGroup;
   budgetForm!: FormGroup;
   
+
+  locations: ProjectLocation[] = [];
+  projectCoordinators: Coordinator[] = [];
+  clients: Client[] = [];
   employees: Employee[] = [];
   selectedEmployees: Employee[] = [];
   employeeSearchTerm = '';
@@ -67,25 +82,20 @@ export class ProjectWizardComponent implements OnInit {
     { id: 5, title: 'Presupuesto', description: 'Estimación de costos', icon: '💰' }
   ];
   
-  coordinadores = [
-    { id: 1, name: 'Diego Garzón', zone: 'Norte' },
-    { id: 2, name: 'Camilo Valencia', zone: 'Sur' },
-    { id: 3, name: 'Eliana Valencia', zone: 'Centro' }
-  ];
+
   
-  bases = ['Ibagué', 'Bogotá', 'Medellín', 'Cali'];
-  zonas = ['Norte', 'Sur', 'Centro', 'Oriente', 'Occidente'];
   
   ngOnInit(): void {
     this.initializeForms();
     this.loadData();
+    this.setupLocationListener();
   }
   
   initializeForms(): void {
     this.contractForm = this.fb.group({
       contractCode: ['', Validators.required],
       contractName: ['', Validators.required],
-      clientName: ['', Validators.required],
+      clientId: ['', Validators.required],
       contractValue: ['', [Validators.required, Validators.min(0)]],
       startDate: ['', Validators.required],
       endDate: ['', Validators.required]
@@ -93,7 +103,7 @@ export class ProjectWizardComponent implements OnInit {
     
     this.coordinatorForm = this.fb.group({
       coordinatorId: ['', Validators.required],
-      zone: ['', Validators.required],
+      locationId: ['', Validators.required],
       volume: ['', [Validators.required, Validators.min(1)]]
     });
     
@@ -105,7 +115,7 @@ export class ProjectWizardComponent implements OnInit {
     });
     
     this.resourcesForm = this.fb.group({
-      base: ['', Validators.required],
+      locationId: ['', Validators.required],
       selectedEmployeeIds: [[]],
       selectedEquipmentIds: [[]],
       selectedVehicleIds: [[]]
@@ -122,13 +132,48 @@ export class ProjectWizardComponent implements OnInit {
   }
   
   loadData(): void {
+
+    this.locationService.getAllLocations().subscribe({
+    next: (locations) => {
+      this.locations = locations;
+     
+    },
+    error: (error) => {
+      this.errorMessage = 'Error al cargar ubicaciones';
+    }
+  });
+
+
+    this.projectCoordService.getAllCoordinators().subscribe({
+
+      next: (projectCoordinators) => this.projectCoordinators = projectCoordinators,
+
+      error: (error) => {
+        console.error('Error cargando coordinadores:', error);
+        this.errorMessage = 'Error al cargar coordinadores';
+      }
+
+
+    })
+
+
     this.employeeService.getAllEmployees().subscribe({
       next: (employees) => this.employees = employees,
       error: (error) => {
         console.error('Error cargando empleados:', error);
         this.errorMessage = 'Error al cargar empleados';
       }
+
     });
+
+    this.clientService.getAllClients().subscribe({
+          next: (clients) => this.clients = clients,
+          error: (error) => {
+            console.error('Error cargando clientes:', error);
+            this.errorMessage = 'Error al cargar clientes';
+          }
+        });
+
 
     this.equipmentService.getAllEquipment().subscribe({
       next: (equipment) => this.equipment = equipment,
@@ -146,15 +191,50 @@ export class ProjectWizardComponent implements OnInit {
       }
     });
   }
+
+  setupLocationListener(): void {
+    this.resourcesForm.get('locationId')?.valueChanges.subscribe(() => {
+      this.selectedEmployees = [];
+      this.selectedEquipment = [];
+      this.selectedVehicles = [];
+      this.resourcesForm.patchValue({
+        selectedEmployeeIds: [],
+        selectedEquipmentIds: [],
+        selectedVehicleIds: []
+      });
+    });
+  }
+
+  getClientName(): string {
+
+    const clientId = this.contractForm.value.clientId;
+    const client = this.clients.find(c => c.id === Number(clientId));
+    return client?.name || 'No asignado';
+
+  }
   
   get filteredEmployees(): Employee[] {
-    if (!this.employeeSearchTerm) return this.employees;
-    const term = this.employeeSearchTerm.toLowerCase();
-    return this.employees.filter(emp => 
-      emp.firstName.toLowerCase().includes(term) ||
-      emp.lastName.toLowerCase().includes(term) ||
-      emp.position.toLowerCase().includes(term)
-    );
+    const selectedLocationId = this.resourcesForm.get('locationId')?.value;
+    
+    let filtered = this.employees;
+    
+    if (selectedLocationId) {
+      const selectedLocation = this.locations.find(loc => loc.id === Number(selectedLocationId));
+      if (selectedLocation) {
+        filtered = filtered.filter(emp => emp.base === selectedLocation.locationName);
+      }
+    }
+    
+    if (this.employeeSearchTerm) {
+      const term = this.employeeSearchTerm.toLowerCase();
+      filtered = filtered.filter(emp => 
+        emp.firstName.toLowerCase().includes(term) ||
+        emp.lastName.toLowerCase().includes(term) ||
+        emp.position.toLowerCase().includes(term)
+      );
+    }
+    
+    return filtered;
   }
 
   get filteredEquipment(): Equipment[] {
@@ -283,39 +363,71 @@ export class ProjectWizardComponent implements OnInit {
   }
   
   submitProject(): void {
-    if (!this.budgetForm.valid) {
-      this.errorMessage = 'Por favor complete todos los campos del presupuesto';
-      return;
-    }
-    
-    this.loading = true;
-    this.errorMessage = '';
-    
-    const projectData = {
-      contract: this.contractForm.value,
-      coordinator: this.coordinatorForm.value,
-      projectDetails: this.projectForm.value,
-      resources: this.resourcesForm.value,
-      budget: this.budgetForm.value
-    };
-    
-    this.projectCreationService.createCompleteProject(projectData).subscribe({
-      next: (result) => {
-        this.projectResult = result;
-        this.loading = false;
-        this.showFinalDashboard = true;
-      },
-      error: (error) => {
-        this.errorMessage = 'Error al crear el proyecto. Por favor intente nuevamente.';
-        console.error('Error:', error);
-        this.loading = false;
-      }
-    });
+  if (!this.budgetForm.valid) {
+    this.errorMessage = 'Por favor complete todos los campos del presupuesto';
+    return;
   }
+  
+  this.loading = true;
+  this.errorMessage = '';
+  
+  const selectedLocation = this.locations.find(loc => loc.id === Number(this.resourcesForm.value.locationId));
+  const coordinatorLocation = this.locations.find(loc => loc.id === Number(this.coordinatorForm.value.locationId));
+  const selectedClient = this.clients.find(c => c.id === Number(this.contractForm.value.clientId));
+  
+  const projectData = {
+    contract: {
+      contractCode: this.contractForm.value.contractCode,
+      contractName: this.contractForm.value.contractName,
+      clientName: selectedClient?.name || 'Cliente no especificado',
+      contractValue: this.contractForm.value.contractValue,
+      startDate: this.contractForm.value.startDate,
+      endDate: this.contractForm.value.endDate
+    },
+    coordinator: {
+      coordinatorId: this.coordinatorForm.value.coordinatorId,
+      zone: coordinatorLocation?.locationName || 'Zona no especificada',
+      volume: this.coordinatorForm.value.volume
+    },
+    projectDetails: {
+      projectName: this.projectForm.value.projectName,
+      projectDescription: this.projectForm.value.projectDescription,
+      estimatedDuration: this.projectForm.value.estimatedDuration,
+      priority: this.projectForm.value.priority
+    },
+    resources: {
+      base: selectedLocation?.locationName || 'Base no especificada',
+      selectedEmployeeIds: this.resourcesForm.value.selectedEmployeeIds,
+      selectedEquipmentIds: this.resourcesForm.value.selectedEquipmentIds,
+      selectedVehicleIds: this.resourcesForm.value.selectedVehicleIds
+    },
+    budget: {
+      personalCost: this.budgetForm.value.personalCost,
+      equipmentCost: this.budgetForm.value.equipmentCost,
+      transportCost: this.budgetForm.value.transportCost,
+      materialsCost: this.budgetForm.value.materialsCost,
+      otherCosts: this.budgetForm.value.otherCosts,
+      notes: this.budgetForm.value.notes || ''
+    }
+  };
+  
+  this.projectCreationService.createCompleteProject(projectData).subscribe({
+    next: (result) => {
+      this.projectResult = result;
+      this.loading = false;
+      this.showFinalDashboard = true;
+    },
+    error: (error) => {
+      this.errorMessage = 'Error al crear el proyecto. Por favor intente nuevamente.';
+      console.error('Error:', error);
+      this.loading = false;
+    }
+  });
+}
   
   getCoordinatorName(): string {
     const coordinatorId = this.coordinatorForm.value.coordinatorId;
-    const coordinator = this.coordinadores.find(c => c.id === Number(coordinatorId));
+    const coordinator = this.projectCoordinators.find(c => c.id === Number(coordinatorId));
     return coordinator?.name || 'No asignado';
   }
   

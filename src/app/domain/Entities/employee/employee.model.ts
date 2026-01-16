@@ -4,6 +4,5 @@ export interface Employee {
   lastName: string;
   position: string;
   base: string;
-  department: string;
   isAvailable: boolean;
 }
