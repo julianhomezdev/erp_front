@@ -17,6 +17,7 @@ export class ProjectDashboardComponent implements OnInit {
   
   projects: any[] = [];
   loading = true;
+  selectedProject: any = null;
   
   ngOnInit(): void {
     this.loadProjects();
@@ -36,7 +37,18 @@ export class ProjectDashboardComponent implements OnInit {
   }
   
   viewProject(projectId: number): void {
-    this.router.navigate(['/projects', projectId]);
+    this.projectService.getProjectById(projectId).subscribe({
+      next: (data) => {
+        this.selectedProject = data;
+      },
+      error: (error) => {
+        console.error('Error cargando detalles:', error);
+      }
+    });
+  }
+  
+  closeModal(): void {
+    this.selectedProject = null;
   }
   
   editProject(projectId: number): void {
@@ -58,5 +70,18 @@ export class ProjectDashboardComponent implements OnInit {
   
   createNewProject(): void {
     this.router.navigate(['/planner']);
+  }
+
+  // ← AGREGAR ESTOS 3 MÉTODOS
+  getEmployeeNames(employees: any[]): string {
+    return employees.map(e => `${e.firstName} ${e.lastName}`).join(', ');
+  }
+
+  getEquipmentNames(equipment: any[]): string {
+  return equipment.map(e => `${e.name} (${e.code})`).join(', ');
+}
+
+  getVehiclePlates(vehicles: any[]): string {
+    return vehicles.map(v => v.plateNumber).join(', ');
   }
 }
