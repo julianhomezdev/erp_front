@@ -42,7 +42,13 @@ export class ProjectDraftComponent implements OnInit {
     
     
     deleteDraft(draftId: number): void {
-        
+    if (!confirm('¿Eliminar este borrador?')) return;
+    
+    this.draftService.deleteDraft(draftId).subscribe({
+        next: () => {
+        this.drafts = this.drafts.filter(d => d.Id !== draftId);
+        }
+    });
     }
     
     loadDrafts(): void {

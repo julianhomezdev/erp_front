@@ -1,17 +1,14 @@
 <div class="p-8 bg-gray-50 min-h-screen">
 
-  <!-- Loading -->
   <div *ngIf="loading" class="text-gray-500 text-sm">
     Cargando drafts...
   </div>
 
-  <!-- Empty -->
   <div *ngIf="!loading && drafts.length === 0"
        class="rounded-lg border border-dashed border-gray-300 p-8 text-center text-gray-500">
     No hay drafts guardados
   </div>
 
-  <!-- Cards -->
   <div *ngIf="!loading && drafts.length > 0"
        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
@@ -20,41 +17,29 @@
          class="group relative cursor-pointer rounded-2xl bg-white p-6
                 shadow-sm hover:shadow-lg transition-all duration-200">
 
-      <!-- Step badge -->
       <div class="absolute top-4 right-4">
-        <span
-          class="text-xs font-semibold px-3 py-1 rounded-full
-                 bg-blue-50 text-blue-700">
-          Paso {{ draft.currentStep }} / 6
+        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-amber-50 text-amber-700">
+          Borrador
         </span>
       </div>
 
-      <!-- Title -->
       <h3 class="text-lg font-semibold text-gray-900 pr-16 leading-snug">
-        {{ draft.contractData?.contractName }}
+        {{ draft.contract?.contractName || draft.contract?.contractCode || 'Sin nombre' }}
       </h3>
 
-      <!-- Client -->
       <p class="mt-2 text-sm text-gray-600">
         Cliente
         <span class="block font-medium text-gray-800">
-          {{ draft.contractData?.clientName || 'Sin cliente' }}
+          {{ draft.contract?.clientName || 'Sin cliente' }}
         </span>
       </p>
 
-      <!-- Progress bar -->
-      <div class="mt-5">
-        <div class="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-          <div
-            class="h-full bg-blue-600 transition-all"
-            [style.width.%]="(draft.currentStep / 6) * 100">
-          </div>
-        </div>
+      <div class="mt-4 text-xs text-gray-500">
+        <p>ODS: {{ draft.serviceOrders?.length || 0 }}</p>
+        <p>Coordinadores: {{ draft.coordinators?.length || 0 }}</p>
       </div>
 
-      <!-- Footer -->
       <div class="mt-6 flex items-center justify-between text-sm">
-
         <span class="text-gray-500 group-hover:text-blue-600 transition">
           Continuar draft →
         </span>
@@ -64,7 +49,6 @@
           (click)="deleteDraft(draft.id); $event.stopPropagation()">
           Eliminar
         </button>
-
       </div>
 
     </div>

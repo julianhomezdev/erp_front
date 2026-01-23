@@ -1,25 +1,63 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule, FormArray, AbstractControl } from '@angular/forms';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { 
+  FormBuilder, 
+  FormGroup, 
+  ReactiveFormsModule, 
+  Validators, 
+  FormsModule, 
+  FormArray 
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Employee } from '../../../domain/Entities/employee/employee.model';
-import { Vehicle } from '../../../domain/Entities/vehicle/vehicle.model';
+import { Subject, interval, Subscription } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
+
+// Servicios
 import { EmployeeService } from '../../../core/services/employee.service';
 import { EquipmentService } from '../../../core/services/equipment.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { ProjectCreationService } from '../../../core/services/project-creation.service';
 import { ClientService } from '../../../core/services/client.service';
+import { ProjectCoordinatorService } from '../../../core/services/project-coordinator.service';
+import { MatrixService } from '../../../core/services/matrix.service';
+import { ProjectCreationService } from '../../../core/services/project-creation.service';
+// Asumiendo que existe este servicio
+import { ProjectDraftService } from '../../../core/services/project-draft.service';
+
+
+// Modelos
+import { Employee } from '../../../domain/Entities/employee/employee.model';
+import { Vehicle } from '../../../domain/Entities/vehicle/vehicle.model';
 import { Equipment } from '../../../domain/Entities/Equipment/equipment.model';
 import { Client } from '../../../domain/Entities/client/client.model';
-import { ProjectCoordinatorService } from '../../../core/services/project-coordinator.service';
 import { Coordinator } from '../../../domain/Entities/coordinator/coordinator.model';
-import { Location as ProjectLocation } from '../../../domain/Entities/location/location.model';
-import { LocationService } from '../../../core/services/location.service';
-import { WizardStep } from '../../../domain/Entities/wizard/wizard-step';
 import { Matrix } from '../../../domain/Entities/matrix/matrix.model';
-import { MatrixService } from '../../../core/services/matrix.service';
-import { forkJoin } from 'rxjs';
 import { CreateProject } from '../../../domain/Entities/project/project-creation.model';
+
+enum ViewMode {
+  CONTRACT = 'contract',
+  ODS_LIST = 'ods_list',
+  PLAN_FORM = 'plan_form'
+}
+
+enum BudgetCategory {
+  TRANSPORT = 'TRANSPORTE',
+  LOGISTICS = 'LOGÍSTICA',
+  SUBCONTRACTING = 'SUBCONTRATACIÓN',
+  RIVER_TRANSPORT = 'TRANSPORTE FLUVIAL',
+  REPORTS = 'INFORMES'
+}
+
+interface BudgetItem {
+  id: string;
+  category: BudgetCategory;
+  concept: string;
+  provider?: string;
+  quantity: number;
+  unit: string;
+  costPerUnit: number;
+  billedPerUnit: number;
+  notes?: string;
+}
 
 @Component({
   selector: 'app-project-wizard',
@@ -28,66 +66,93 @@ import { CreateProject } from '../../../domain/Entities/project/project-creation
   templateUrl: './project-wizard.component.html',
   styleUrls: ['./project-wizard.component.css']
 })
-export class ProjectWizardComponent implements OnInit {
+export class ProjectWizardComponent implements OnInit, OnDestroy {
   
+  // Inyección de servicios
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private employeeService = inject(EmployeeService);
   private equipmentService = inject(EquipmentService);
   private vehicleService = inject(VehicleService);
   private clientService = inject(ClientService);
-  private projectCoordService = inject(ProjectCoordinatorService);
-  private locationService = inject(LocationService);
-  private projectCreationService = inject(ProjectCreationService);
+  private coordinatorService = inject(ProjectCoordinatorService);
   private matrixService = inject(MatrixService);
+  private projectCreationService = inject(ProjectCreationService);
+  private draftService = inject(ProjectDraftService);
   private route = inject(ActivatedRoute);
+
+
+  // Enums para el template
+  ViewMode = ViewMode;
+  BudgetCategory = BudgetCategory;
   
-  currentStep = 1;
-  loading = false;
-  successMessage = '';
-  errorMessage = '';
-  showFinalDashboard = false;
-  projectResult: number | null = null;
-  dataReady = false;
+  // Estado de la vista
+  currentView: ViewMode = ViewMode.CONTRACT;
+  currentOdsIndex: number = -1;
+  currentPlanIndex: number = -1;
   
+  // Estado del draft
+  draftId: number | null = null;
+  isDraft: boolean = true;
+  lastSaved: Date | null = null;
+  autoSaving: boolean = false;
+  
+  // Formularios
   contractForm!: FormGroup;
   odsForm!: FormGroup;
   planForm!: FormGroup;
   coordinatorForm!: FormGroup;
+  budgetItemForm!: FormGroup;
   
+  // Datos del proyecto
   serviceOrders: any[] = [];
   assignedCoordinators: any[] = [];
-  matrices: Matrix[] = [];
   
-  locations: ProjectLocation[] = [];
-  projectCoordinators: Coordinator[] = [];
+  // Catálogos
   clients: Client[] = [];
   employees: Employee[] = [];
   equipment: Equipment[] = [];
   vehicles: Vehicle[] = [];
+  matrices: Matrix[] = [];
+  coordinators: Coordinator[] = [];
   
-  steps: WizardStep[] = [
-    { id: 1, title: 'Contrato', description: 'Datos del contrato', icon: '📄' },
-    { id: 2, title: 'Órdenes de Servicio', description: 'ODS del contrato', icon: '📋' },
-    { id: 3, title: 'Planes de Muestreo', description: 'Planes por ODS', icon: '📍' },
-    { id: 4, title: 'Coordinadores', description: 'Asignación', icon: '👥' },
-    { id: 5, title: 'Resumen', description: 'Verificación final', icon: '✓' }
-  ];
+  // UI State
+  loading: boolean = false;
+  dataReady: boolean = false;
+  errorMessage: string = '';
+  successMessage: string = '';
+  showFinalDashboard: boolean = false;
+  projectResult: number | null = null;
   
-  currentOdsIndex: number = -1;
-  currentPlanIndex: number = -1;
-  editingPlan: boolean = false;
+  // Modales
+  showBudgetItemModal: boolean = false;
+  editingBudgetItemIndex: number = -1;
+  
+  // Auto-guardado
+  private destroy$ = new Subject<void>();
+  private autoSaveSubscription?: Subscription;
+  private formChanges$ = new Subject<void>();
 
   ngOnInit(): void {
     this.initializeForms();
-    this.loadData();
+    this.loadCatalogs();
+    this.setupAutoSave();
+    this.checkForDraftToLoad();
   }
-  
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.autoSaveSubscription) {
+      this.autoSaveSubscription.unsubscribe();
+    }
+  }
+
   /**
-   * Inicializa todos los formularios con validaciones mínimas y opcionales
+   * Inicializa todos los formularios
    */
   initializeForms(): void {
-    // Contrato: solo campos esenciales son requeridos
+    // Formulario de contrato
     this.contractForm = this.fb.group({
       contractCode: ['', Validators.required],
       contractName: [''],
@@ -95,93 +160,339 @@ export class ProjectWizardComponent implements OnInit {
       startDate: [''],
       endDate: ['']
     });
-    
-    // ODS: solo código requerido para agregar
+
+    // Formulario de ODS
     this.odsForm = this.fb.group({
       odsCode: ['', Validators.required],
       odsName: [''],
       startDate: [''],
       endDate: ['']
     });
-    
-    // Plan: solo código requerido, el resto es opcional
+
+    // Formulario de plan de muestreo
     this.planForm = this.fb.group({
       planCode: ['', Validators.required],
       startDate: [''],
       endDate: [''],
-      sitesCount: [1],
       sites: this.fb.array([]),
       resourceStartDate: [''],
       resourceEndDate: [''],
-      selectedEmployeeIds: [[]],
+      selectedEmployeeIds: [[], Validators.required],
       selectedEquipmentIds: [[]],
       selectedVehicleIds: [[]],
+      budgetItems: [[]],
       chCode: [''],
-      transportCostChemilab: [0],
-      transportBilledToClient: [0],
-      logisticsCostChemilab: [0],
-      logisticsBilledToClient: [0],
-      subcontractingCostChemilab: [0],
-      subcontractingBilledToClient: [0],
-      fluvialTransportCostChemilab: [0],
-      fluvialTransportBilledToClient: [0],
-      reportsCostChemilab: [0],
-      reportsBilledToClient: [0],
       notes: ['']
     });
-    
-    // Coordinador: solo para agregar, no bloquea avance si no hay ninguno
-    this.coordinatorForm = this.fb.group({
-      coordinatorId: [null]
-    });
-  }
-  
-  get sitesArray(): FormArray {
-    return this.planForm.get('sites') as FormArray;
-  }
-  
-  loadData(): void {
-    forkJoin({
-      clients: this.clientService.getAllClients(),
-      employees: this.employeeService.getAllEmployees(),
-      equipment: this.equipmentService.getAllEquipment(),
-      vehicles: this.vehicleService.getAllVehicles(),
-      locations: this.locationService.getAllLocations(),
-      matrices: this.matrixService.getAllMatrix(),
-      coordinators: this.projectCoordService.getAllCoordinators()
-    }).subscribe(result => {
-      this.clients = result.clients;
-      this.employees = result.employees;
-      this.equipment = result.equipment;
-      this.vehicles = result.vehicles;
-      this.locations = result.locations;
-      this.matrices = result.matrices;
-      this.projectCoordinators = result.coordinators;
-      this.dataReady = true;
-    });
-  }
 
-  getClientName(): string {
-    const clientId = this.contractForm.value.clientId;
-    const client = this.clients.find(c => c.id === Number(clientId));
-    return client?.name || 'No asignado';
+    // Formulario de coordinadores
+    this.coordinatorForm = this.fb.group({
+      coordinatorId: [null, Validators.required]
+    });
+
+    // Formulario de ítem de presupuesto
+    this.budgetItemForm = this.fb.group({
+      category: [BudgetCategory.TRANSPORT, Validators.required],
+      concept: ['', Validators.required],
+      provider: [''],
+      quantity: [1, [Validators.required, Validators.min(1)]],
+      unit: ['días', Validators.required],
+      costPerUnit: [0, [Validators.required, Validators.min(0)]],
+      billedPerUnit: [0, [Validators.required, Validators.min(0)]],
+      notes: ['']
+    });
+
+    // Agregar un sitio inicial
+    this.addSite();
+
+    // Suscribirse a cambios para auto-guardado
+    this.contractForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.formChanges$.next());
+
+    this.planForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.formChanges$.next());
   }
 
   /**
-   * Valida si una ODS puede ser agregada
+   * Carga todos los catálogos necesarios
    */
-  private validateOdsForAdd(): { valid: boolean; message: string } {
-    if (!this.odsForm.get('odsCode')?.value?.trim()) {
-      return { valid: false, message: 'Ingrese un código para la ODS' };
-    }
-    return { valid: true, message: '' };
+  loadCatalogs(): void {
+    this.loading = true;
+    
+    Promise.all([
+      this.clientService.getAllClients().toPromise(),
+      this.employeeService.getAllEmployees().toPromise(),
+      this.equipmentService.getAllEquipment().toPromise(),
+      this.vehicleService.getAllVehicles().toPromise(),
+      this.matrixService.getAllMatrix().toPromise(),
+      this.coordinatorService.getAllCoordinators().toPromise()
+    ]).then(([clients, employees, equipment, vehicles, matrices, coordinators]) => {
+      this.clients = clients || [];
+      this.employees = employees || [];
+      this.equipment = equipment || [];
+      this.vehicles = vehicles || [];
+      this.matrices = matrices || [];
+      this.coordinators = coordinators || [];
+      this.dataReady = true;
+      this.loading = false;
+    }).catch(error => {
+      console.error('Error cargando catálogos:', error);
+      this.errorMessage = 'Error al cargar los datos necesarios';
+      this.loading = false;
+    });
   }
 
-  addServiceOrder(): void {
-    const validation = this.validateOdsForAdd();
+  /**
+   * Configura el sistema de auto-guardado
+   */
+  setupAutoSave(): void {
+    // Auto-guardar cada 30 segundos cuando hay cambios
+    this.formChanges$
+      .pipe(
+        debounceTime(30000), // 30 segundos
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        if (this.isDraft && this.contractForm.valid) {
+          this.saveDraft(true);
+        }
+      });
+  }
+
+  checkForDraftToLoad(): void {
+    this.route.queryParams.subscribe(params => {
+      const draftId = params['draftId'];
+      if (draftId) {
+        this.loadDraft(Number(draftId));
+      }
+    });
+  }
+
+  get sitesArray(): FormArray {
+    return this.planForm.get('sites') as FormArray;
+  }
+
+  addSite(): void {
+    const siteGroup = this.fb.group({
+      name: ['', Validators.required],
+      matrixId: ['', Validators.required],
+      isSubcontracted: [false],
+      subcontractorName: [''],
+      executionDate: [''],
+      hasReport: [false],
+      hasGDB: [false]
+    });
+
+    // Validación condicional para subcontratación
+    siteGroup.get('isSubcontracted')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(isSubcontracted => {
+        const subcontractorControl = siteGroup.get('subcontractorName');
+        if (isSubcontracted) {
+          subcontractorControl?.setValidators([Validators.required]);
+        } else {
+          subcontractorControl?.clearValidators();
+        }
+        subcontractorControl?.updateValueAndValidity();
+      });
+
+    this.sitesArray.push(siteGroup);
+    this.formChanges$.next();
+  }
+
+  removeSite(index: number): void {
+    if (this.sitesArray.length > 1) {
+      this.sitesArray.removeAt(index);
+      this.formChanges$.next();
+    }
+  }
+
+  // ==========================================
+  // GESTIÓN DE RECURSOS
+  // ==========================================
+
+  toggleEmployeeSelection(employeeId: number): void {
+    const current = this.planForm.value.selectedEmployeeIds || [];
+    const index = current.indexOf(employeeId);
     
-    if (!validation.valid) {
-      this.errorMessage = validation.message;
+    if (index === -1) {
+      this.planForm.patchValue({
+        selectedEmployeeIds: [...current, employeeId]
+      });
+    } else {
+      current.splice(index, 1);
+      this.planForm.patchValue({
+        selectedEmployeeIds: [...current]
+      });
+    }
+    this.formChanges$.next();
+  }
+
+  isEmployeeSelected(employeeId: number): boolean {
+    return (this.planForm.value.selectedEmployeeIds || []).includes(employeeId);
+  }
+
+  toggleEquipmentSelection(equipmentId: number): void {
+    const current = this.planForm.value.selectedEquipmentIds || [];
+    const index = current.indexOf(equipmentId);
+    
+    if (index === -1) {
+      this.planForm.patchValue({
+        selectedEquipmentIds: [...current, equipmentId]
+      });
+    } else {
+      current.splice(index, 1);
+      this.planForm.patchValue({
+        selectedEquipmentIds: [...current]
+      });
+    }
+    this.formChanges$.next();
+  }
+
+  isEquipmentSelected(equipmentId: number): boolean {
+    return (this.planForm.value.selectedEquipmentIds || []).includes(equipmentId);
+  }
+
+  toggleVehicleSelection(vehicleId: number): void {
+    const current = this.planForm.value.selectedVehicleIds || [];
+    const index = current.indexOf(vehicleId);
+    
+    if (index === -1) {
+      this.planForm.patchValue({
+        selectedVehicleIds: [...current, vehicleId]
+      });
+    } else {
+      current.splice(index, 1);
+      this.planForm.patchValue({
+        selectedVehicleIds: [...current]
+      });
+    }
+    this.formChanges$.next();
+  }
+
+  isVehicleSelected(vehicleId: number): boolean {
+    return (this.planForm.value.selectedVehicleIds || []).includes(vehicleId);
+  }
+
+  // ==========================================
+  // GESTIÓN DE PRESUPUESTO
+  // ==========================================
+
+  get budgetItems(): BudgetItem[] {
+    return this.planForm.value.budgetItems || [];
+  }
+
+  openBudgetItemModal(): void {
+    this.budgetItemForm.reset({
+      category: BudgetCategory.TRANSPORT,
+      quantity: 1,
+      unit: 'días',
+      costPerUnit: 0,
+      billedPerUnit: 0
+    });
+    this.editingBudgetItemIndex = -1;
+    this.showBudgetItemModal = true;
+  }
+
+  editBudgetItem(index: number): void {
+    const item = this.budgetItems[index];
+    this.budgetItemForm.patchValue(item);
+    this.editingBudgetItemIndex = index;
+    this.showBudgetItemModal = true;
+  }
+
+  saveBudgetItem(): void {
+    if (!this.budgetItemForm.valid) {
+      this.errorMessage = 'Complete todos los campos requeridos del ítem de presupuesto';
+      return;
+    }
+
+    const formValue = this.budgetItemForm.value;
+    const budgetItem: BudgetItem = {
+      id: this.editingBudgetItemIndex === -1 ? this.generateId() : this.budgetItems[this.editingBudgetItemIndex].id,
+      ...formValue
+    };
+
+    const currentItems = [...this.budgetItems];
+    
+    if (this.editingBudgetItemIndex === -1) {
+      currentItems.push(budgetItem);
+    } else {
+      currentItems[this.editingBudgetItemIndex] = budgetItem;
+    }
+
+    this.planForm.patchValue({ budgetItems: currentItems });
+    this.closeBudgetItemModal();
+    this.formChanges$.next();
+  }
+
+  removeBudgetItem(index: number): void {
+    const currentItems = [...this.budgetItems];
+    currentItems.splice(index, 1);
+    this.planForm.patchValue({ budgetItems: currentItems });
+    this.formChanges$.next();
+  }
+
+  closeBudgetItemModal(): void {
+    this.showBudgetItemModal = false;
+    this.editingBudgetItemIndex = -1;
+    this.budgetItemForm.reset();
+  }
+
+  calculateItemTotal(item: BudgetItem): { cost: number; billed: number; profit: number; margin: number } {
+    const cost = item.quantity * item.costPerUnit;
+    const billed = item.quantity * item.billedPerUnit;
+    const profit = billed - cost;
+    const margin = billed > 0 ? (profit / billed) * 100 : 0;
+    
+    return { cost, billed, profit, margin };
+  }
+
+  get planBudgetSummary() {
+    const summary = {
+      byCategory: new Map<BudgetCategory, any>(),
+      grandTotal: { cost: 0, billed: 0, profit: 0, margin: 0 }
+    };
+
+    this.budgetItems.forEach(item => {
+      const totals = this.calculateItemTotal(item);
+      
+      if (!summary.byCategory.has(item.category)) {
+        summary.byCategory.set(item.category, {
+          cost: 0,
+          billed: 0,
+          profit: 0,
+          items: []
+        });
+      }
+
+      const catSummary = summary.byCategory.get(item.category)!;
+      catSummary.cost += totals.cost;
+      catSummary.billed += totals.billed;
+      catSummary.profit += totals.profit;
+      catSummary.items.push(item);
+
+      summary.grandTotal.cost += totals.cost;
+      summary.grandTotal.billed += totals.billed;
+      summary.grandTotal.profit += totals.profit;
+    });
+
+    if (summary.grandTotal.billed > 0) {
+      summary.grandTotal.margin = (summary.grandTotal.profit / summary.grandTotal.billed) * 100;
+    }
+
+    return summary;
+  }
+
+  // ==========================================
+  // GESTIÓN DE ODS
+  // ==========================================
+
+  addServiceOrder(): void {
+    if (!this.odsForm.valid) {
+      this.errorMessage = 'Ingrese al menos el código de la ODS';
       return;
     }
 
@@ -196,96 +507,42 @@ export class ProjectWizardComponent implements OnInit {
     this.serviceOrders.push(ods);
     this.odsForm.reset();
     this.errorMessage = '';
+    this.formChanges$.next();
   }
 
   removeServiceOrder(index: number): void {
     this.serviceOrders.splice(index, 1);
+    this.formChanges$.next();
   }
 
   selectOdsForPlans(index: number): void {
     this.currentOdsIndex = index;
-    this.currentStep = 3;
+    this.currentView = ViewMode.PLAN_FORM;
   }
 
-  updateSitesCount(): void {
-    const count = this.planForm.get('sitesCount')?.value || 0;
-    const currentLength = this.sitesArray.length;
-    
-    if (count > currentLength) {
-      for (let i = currentLength; i < count; i++) {
-        this.addSite();
-      }
-    } else if (count < currentLength) {
-      for (let i = currentLength; i > count; i--) {
-        this.sitesArray.removeAt(i - 1);
-      }
-    }
+  backToOdsList(): void {
+    this.currentView = ViewMode.ODS_LIST;
+    this.currentOdsIndex = -1;
+    this.resetPlanForm();
   }
 
-  /**
-   * Agrega un sitio sin validaciones requeridas por defecto
-   */
-  addSite(): void {
-    const siteGroup = this.fb.group({
-      name: [''],
-      matrixId: [''],
-      executionDate: [''],
-      hasReport: [false],
-      hasGDB: [false]
-    });
-    this.sitesArray.push(siteGroup);
-  }
-
-  removeSite(index: number): void {
-    this.sitesArray.removeAt(index);
-    this.planForm.patchValue({
-      sitesCount: this.sitesArray.length
-    });
-  }
-
-  /**
-   * Valida sitios solo si hay elementos en el array
-   */
-  private validateSitesIfPresent(): { valid: boolean; message: string } {
-    if (this.sitesArray.length === 0) {
-      return { valid: true, message: '' };
-    }
-
-    for (let i = 0; i < this.sitesArray.length; i++) {
-      const site = this.sitesArray.at(i).value;
-      if (!site.name?.trim()) {
-        return { valid: false, message: `El sitio ${i + 1} requiere un nombre` };
-      }
-      if (!site.matrixId) {
-        return { valid: false, message: `El sitio ${i + 1} requiere una matriz` };
-      }
-    }
-
-    return { valid: true, message: '' };
-  }
-
-  /**
-   * Valida plan antes de agregarlo a la ODS
-   */
-  private validatePlanForAdd(): { valid: boolean; message: string } {
-    if (!this.planForm.get('planCode')?.value?.trim()) {
-      return { valid: false, message: 'Ingrese un código para el plan de muestreo' };
-    }
-
-    // Validar sitios solo si existen
-    const sitesValidation = this.validateSitesIfPresent();
-    if (!sitesValidation.valid) {
-      return sitesValidation;
-    }
-
-    return { valid: true, message: '' };
-  }
+  // ==========================================
+  // GESTIÓN DE PLANES DE MUESTREO
+  // ==========================================
 
   addPlanToCurrentOds(): void {
-    const validation = this.validatePlanForAdd();
-    
-    if (!validation.valid) {
-      this.errorMessage = validation.message;
+    if (!this.planForm.valid) {
+      this.errorMessage = 'Complete los campos requeridos del plan';
+      return;
+    }
+
+    if (this.sitesArray.length === 0) {
+      this.errorMessage = 'Agregue al menos un sitio de monitoreo';
+      return;
+    }
+
+    if (this.planForm.value.selectedEmployeeIds.length === 0) {
+      this.errorMessage = 'Asigne al menos un empleado al plan';
       return;
     }
 
@@ -295,6 +552,8 @@ export class ProjectWizardComponent implements OnInit {
         name: site.name,
         matrixId: Number(site.matrixId),
         matrixName: matrix?.matrixName || '',
+        isSubcontracted: site.isSubcontracted,
+        subcontractorName: site.subcontractorName || null,
         executionDate: site.executionDate,
         hasReport: site.hasReport,
         hasGDB: site.hasGDB
@@ -328,146 +587,52 @@ export class ProjectWizardComponent implements OnInit {
       },
       budget: {
         chCode: this.planForm.value.chCode,
-        transportCostChemilab: this.planForm.value.transportCostChemilab || 0,
-        transportBilledToClient: this.planForm.value.transportBilledToClient || 0,
-        logisticsCostChemilab: this.planForm.value.logisticsCostChemilab || 0,
-        logisticsBilledToClient: this.planForm.value.logisticsBilledToClient || 0,
-        subcontractingCostChemilab: this.planForm.value.subcontractingCostChemilab || 0,
-        subcontractingBilledToClient: this.planForm.value.subcontractingBilledToClient || 0,
-        fluvialTransportCostChemilab: this.planForm.value.fluvialTransportCostChemilab || 0,
-        fluvialTransportBilledToClient: this.planForm.value.fluvialTransportBilledToClient || 0,
-        reportsCostChemilab: this.planForm.value.reportsCostChemilab || 0,
-        reportsBilledToClient: this.planForm.value.reportsBilledToClient || 0,
-        notes: this.planForm.value.notes || ''
+        items: this.budgetItems,
+        summary: this.planBudgetSummary,
+        notes: this.planForm.value.notes
       }
     };
 
     this.serviceOrders[this.currentOdsIndex].samplingPlans.push(plan);
     this.resetPlanForm();
     this.errorMessage = '';
+    this.successMessage = 'Plan agregado exitosamente';
+    setTimeout(() => this.successMessage = '', 3000);
+    this.formChanges$.next();
+  }
+
+  removePlanFromOds(odsIndex: number, planIndex: number): void {
+    this.serviceOrders[odsIndex].samplingPlans.splice(planIndex, 1);
+    this.formChanges$.next();
   }
 
   resetPlanForm(): void {
     this.planForm.reset({
-      sitesCount: 1,
-      transportCostChemilab: 0,
-      transportBilledToClient: 0,
-      logisticsCostChemilab: 0,
-      logisticsBilledToClient: 0,
-      subcontractingCostChemilab: 0,
-      subcontractingBilledToClient: 0,
-      fluvialTransportCostChemilab: 0,
-      fluvialTransportBilledToClient: 0,
-      reportsCostChemilab: 0,
-      reportsBilledToClient: 0,
       selectedEmployeeIds: [],
       selectedEquipmentIds: [],
-      selectedVehicleIds: []
+      selectedVehicleIds: [],
+      budgetItems: []
     });
     this.sitesArray.clear();
     this.addSite();
   }
 
-  removePlanFromOds(odsIndex: number, planIndex: number): void {
-    this.serviceOrders[odsIndex].samplingPlans.splice(planIndex, 1);
-  }
-
-  backToOdsList(): void {
-    this.currentOdsIndex = -1;
-    this.currentStep = 2;
-    this.resetPlanForm();
-  }
-
-  toggleEmployeeSelection(employeeId: number): void {
-    const current = this.planForm.value.selectedEmployeeIds || [];
-    const index = current.indexOf(employeeId);
-    
-    if (index === -1) {
-      this.planForm.patchValue({
-        selectedEmployeeIds: [...current, employeeId]
-      });
-    } else {
-      current.splice(index, 1);
-      this.planForm.patchValue({
-        selectedEmployeeIds: [...current]
-      });
-    }
-  }
-
-  isEmployeeSelected(employeeId: number): boolean {
-    return (this.planForm.value.selectedEmployeeIds || []).includes(employeeId);
-  }
-
-  toggleEquipmentSelection(equipmentId: number): void {
-    const current = this.planForm.value.selectedEquipmentIds || [];
-    const index = current.indexOf(equipmentId);
-    
-    if (index === -1) {
-      this.planForm.patchValue({
-        selectedEquipmentIds: [...current, equipmentId]
-      });
-    } else {
-      current.splice(index, 1);
-      this.planForm.patchValue({
-        selectedEquipmentIds: [...current]
-      });
-    }
-  }
-
-  isEquipmentSelected(equipmentId: number): boolean {
-    return (this.planForm.value.selectedEquipmentIds || []).includes(equipmentId);
-  }
-
-  toggleVehicleSelection(vehicleId: number): void {
-    const current = this.planForm.value.selectedVehicleIds || [];
-    const index = current.indexOf(vehicleId);
-    
-    if (index === -1) {
-      this.planForm.patchValue({
-        selectedVehicleIds: [...current, vehicleId]
-      });
-    } else {
-      current.splice(index, 1);
-      this.planForm.patchValue({
-        selectedVehicleIds: [...current]
-      });
-    }
-  }
-
-  isVehicleSelected(vehicleId: number): boolean {
-    return (this.planForm.value.selectedVehicleIds || []).includes(vehicleId);
-  }
-
   getPlanBudgetTotal(plan: any): number {
-    const b = plan.budget;
-    return (b.transportCostChemilab || 0) + (b.transportBilledToClient || 0) +
-           (b.logisticsCostChemilab || 0) + (b.logisticsBilledToClient || 0) +
-           (b.subcontractingCostChemilab || 0) + (b.subcontractingBilledToClient || 0) +
-           (b.fluvialTransportCostChemilab || 0) + (b.fluvialTransportBilledToClient || 0) +
-           (b.reportsCostChemilab || 0) + (b.reportsBilledToClient || 0);
+    if (!plan.budget || !plan.budget.summary) return 0;
+    return plan.budget.summary.grandTotal.billed || 0;
   }
 
-  getCurrentPlanBudgetTotal(): number {
-    const v = this.planForm.value;
-    return (v.transportCostChemilab || 0) + (v.transportBilledToClient || 0) +
-           (v.logisticsCostChemilab || 0) + (v.logisticsBilledToClient || 0) +
-           (v.subcontractingCostChemilab || 0) + (v.subcontractingBilledToClient || 0) +
-           (v.fluvialTransportCostChemilab || 0) + (v.fluvialTransportBilledToClient || 0) +
-           (v.reportsCostChemilab || 0) + (v.reportsBilledToClient || 0);
-  }
 
   addCoordinator(): void {
-    const coordinatorId = this.coordinatorForm.value.coordinatorId;
-    
-    if (!coordinatorId) {
+    if (!this.coordinatorForm.valid) {
       this.errorMessage = 'Seleccione un coordinador';
       return;
     }
 
-    const coordinator = this.projectCoordinators.find(c => c.id === Number(coordinatorId));
+    const coordinatorId = this.coordinatorForm.value.coordinatorId;
+    const coordinator = this.coordinators.find(c => c.id === Number(coordinatorId));
     
     if (coordinator) {
-      // Evitar duplicados
       const alreadyAdded = this.assignedCoordinators.some(c => c.coordinatorId === Number(coordinatorId));
       if (alreadyAdded) {
         this.errorMessage = 'Este coordinador ya fue agregado';
@@ -480,234 +645,303 @@ export class ProjectWizardComponent implements OnInit {
       });
       this.coordinatorForm.reset();
       this.errorMessage = '';
+      this.formChanges$.next();
     }
   }
 
   removeCoordinator(index: number): void {
     this.assignedCoordinators.splice(index, 1);
+    this.formChanges$.next();
   }
 
-  /**
-   * Validación inteligente por paso
-   * - Paso 1: Validar contrato
-   * - Paso 2: Al menos una ODS (sin forzar planes)
-   * - Paso 3: Libre (permite salir sin agregar planes)
-   * - Paso 4: Al menos un coordinador
-   * - Paso 5: Siempre válido (resumen)
-   */
-  isStepValid(): boolean {
-    switch (this.currentStep) {
-      case 1:
-        // Contrato: código y cliente requeridos
-        return this.contractForm.valid;
-      
-      case 2:
-        // ODS: al menos una agregada
-        return this.serviceOrders.length > 0;
-      
-      case 3:
-        // Planes: siempre válido, no bloquea avance
-        // El usuario decide si agrega o no planes
-        return true;
-      
-      case 4:
-        // Coordinadores: al menos uno
-        return this.assignedCoordinators.length > 0;
-      
-      case 5:
-        // Resumen: siempre válido
-        return true;
-      
-      default:
-        return false;
+
+  saveDraft(isAutoSave: boolean = false): void {
+  if (!this.contractForm.valid) {
+    if (!isAutoSave) {
+      this.errorMessage = 'Complete al menos el código del contrato y el cliente';
     }
+    return;
   }
 
-  /**
-   * Validación especial antes de avanzar
-   */
-  private canAdvanceFromStep(): { canAdvance: boolean; message: string } {
-    // Si está editando una ODS en paso 3, advertir pero no bloquear
-    if (this.currentStep === 3 && this.currentOdsIndex !== -1) {
-      return { 
-        canAdvance: false, 
-        message: 'Vuelva a la lista de ODS antes de continuar (botón "← Volver a ODS")'
-      };
-    }
+  const draftData = {
+  Id: this.draftId,
+  Status: 'draft',
+  Contract: {
+    ContractCode: this.contractForm.value.contractCode,
+    ContractName: this.contractForm.value.contractName || '',
+    ClientId: Number(this.contractForm.value.clientId),
+    ClientName: null,
+    StartDate: this.contractForm.value.startDate || null,
+    EndDate: this.contractForm.value.endDate || null
+  },
+  ServiceOrders: this.serviceOrders || [],
+  Coordinators: this.assignedCoordinators || []
+};
 
-    return { canAdvance: true, message: '' };
-  }
-
-  nextStep(): void {
-    const advanceCheck = this.canAdvanceFromStep();
-    
-    if (!advanceCheck.canAdvance) {
-      this.errorMessage = advanceCheck.message;
-      return;
-    }
-    
-    if (this.isStepValid() && this.currentStep < 5) {
-      this.currentStep++;
-      this.errorMessage = '';
-    } else if (!this.isStepValid()) {
-      this.errorMessage = this.getStepValidationMessage();
-    }
-  }
-
-  /**
-   * Mensajes personalizados por paso
-   */
-  private getStepValidationMessage(): string {
-    switch (this.currentStep) {
-      case 1:
-        return 'Complete el código del contrato y seleccione un cliente';
-      case 2:
-        return 'Agregue al menos una Orden de Servicio';
-      case 4:
-        return 'Asigne al menos un coordinador al proyecto';
-      default:
-        return 'Complete los campos requeridos';
-    }
-  }
-
-  prevStep(): void {
-    if (this.currentStep > 1) {
-      this.currentStep--;
-      this.errorMessage = '';
-    }
-  }
-
-  /**
-   * Validación final antes de crear el proyecto
-   */
-  private validateCompleteProject(): { valid: boolean; message: string } {
-    if (!this.contractForm.valid) {
-      return { valid: false, message: 'El contrato tiene datos incompletos' };
-    }
-
-    if (this.serviceOrders.length === 0) {
-      return { valid: false, message: 'Debe agregar al menos una Orden de Servicio' };
-    }
-
-    if (this.assignedCoordinators.length === 0) {
-      return { valid: false, message: 'Debe asignar al menos un coordinador' };
-    }
-
-    // Validar que cada ODS tenga al menos un plan si se requiere
-    // (esto es opcional según tu lógica de negocio)
-    const odsWithoutPlans = this.serviceOrders.filter(ods => ods.samplingPlans.length === 0);
-    if (odsWithoutPlans.length > 0) {
-      // Solo advertencia, no bloqueo
-      console.warn(`${odsWithoutPlans.length} ODS sin planes de muestreo`);
-    }
-
-    return { valid: true, message: '' };
-  }
-
-  submitProject(): void {
-    const validation = this.validateCompleteProject();
-    
-    if (!validation.valid) {
-      this.errorMessage = validation.message;
-      return;
-    }
-
+  console.log('DATOS A ENVIAR:', JSON.stringify(draftData, null, 2));
+  
+  if (isAutoSave) {
+    this.autoSaving = true;
+  } else {
     this.loading = true;
-    this.errorMessage = '';
-    
-    const contractData = this.contractForm.value;
-    
-    const serviceOrders = this.serviceOrders.map(ods => ({
-      OdsCode: ods.odsCode,
-      OdsName: ods.odsName,
-      StartDate: ods.startDate,
-      EndDate: ods.endDate,
-      SamplingPlans: ods.samplingPlans.map((plan: any) => ({
-        PlanCode: plan.planCode,
-        StartDate: plan.startDate,
-        EndDate: plan.endDate,
-        Sites: plan.sites.map((site: any) => ({
-          Name: site.name,
-          MatrixId: site.matrixId,
-          ExecutionDate: site.executionDate,
-          HasReport: site.hasReport,
-          HasGDB: site.hasGDB
-        })),
-        Resources: {
-          StartDate: plan.resources.startDate,
-          EndDate: plan.resources.endDate,
-          EmployeeIds: plan.resources.employeeIds,
-          EquipmentIds: plan.resources.equipmentIds,
-          VehicleIds: plan.resources.vehicleIds
-        },
-        Budget: {
-          CHCode: plan.budget.chCode,
-          TransportCostChemilab: plan.budget.transportCostChemilab,
-          TransportBilledToClient: plan.budget.transportBilledToClient,
-          LogisticsCostChemilab: plan.budget.logisticsCostChemilab,
-          LogisticsBilledToClient: plan.budget.logisticsBilledToClient,
-          SubcontractingCostChemilab: plan.budget.subcontractingCostChemilab,
-          SubcontractingBilledToClient: plan.budget.subcontractingBilledToClient,
-          FluvialTransportCostChemilab: plan.budget.fluvialTransportCostChemilab,
-          FluvialTransportBilledToClient: plan.budget.fluvialTransportBilledToClient,
-          ReportsCostChemilab: plan.budget.reportsCostChemilab,
-          ReportsBilledToClient: plan.budget.reportsBilledToClient,
-          Notes: plan.budget.notes
-        }
-      }))
-    }));
-    
-    const projectDto: CreateProject = {
-      Contract: {
-        ContractCode: contractData.contractCode,
-        ContractName: contractData.contractName || '',
-        ClientId: Number(contractData.clientId),
-        StartDate: contractData.startDate,
-        EndDate: contractData.endDate
-      },
-      ServiceOrders: serviceOrders,
-      CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
-      ProjectDetails: {
-        ProjectName: contractData.contractName || contractData.contractCode,
-        ProjectDescription: '',
-        Priority: 'media'
+  }
+
+  this.draftService.saveDraft(draftData).subscribe({
+    next: (result) => {
+      console.log('RESPUESTA:', result);
+      if (!this.draftId) {
+        this.draftId = result.id || result.Id;
       }
-    };
+      this.lastSaved = new Date();
+      
+      if (!isAutoSave) {
+        this.successMessage = 'Borrador guardado exitosamente';
+        setTimeout(() => this.successMessage = '', 3000);
+      }
+      
+      this.loading = false;
+      this.autoSaving = false;
+    },
+    error: (error) => {
+      console.error('ERROR COMPLETO:', error);
+      console.error('ERROR MESSAGE:', error.error);
+      console.error('ERRORES DE VALIDACIÓN:', error.error?.errors); // AGREGA ESTA LÍNEA
+      if (!isAutoSave) {
+        this.errorMessage = 'Error al guardar el borrador';
+      }
+      this.loading = false;
+      this.autoSaving = false;
+    }
+  });
+}
+  loadDraft(draftId: number): void {
+    this.loading = true;
     
-    this.projectCreationService.createCompleteProject(projectDto).subscribe({
-      next: (result) => {
-        this.projectResult = result;
+    this.draftService.getDraftById(draftId).subscribe({
+      next: (draft) => {
+        this.draftId = draftId;
+        this.restoreDraftData(draft);
         this.loading = false;
-        this.showFinalDashboard = true;
+        this.successMessage = 'Borrador cargado exitosamente';
+        setTimeout(() => this.successMessage = '', 3000);
       },
       error: (error) => {
-        this.errorMessage = 'Error al crear el proyecto: ' + (error.error?.message || error.message);
-        console.error('Error completo:', error);
+        console.error('Error cargando draft:', error);
+        this.errorMessage = 'Error al cargar el borrador';
         this.loading = false;
       }
     });
   }
 
-  resetWizard(): void {
-    this.currentStep = 1;
-    this.contractForm.reset();
-    this.odsForm.reset();
-    this.resetPlanForm();
-    this.coordinatorForm.reset();
-    this.serviceOrders = [];
-    this.assignedCoordinators = [];
-    this.currentOdsIndex = -1;
-    this.successMessage = '';
-    this.errorMessage = '';
-    this.showFinalDashboard = false;
-    this.projectResult = null;
+  deleteDraft(): void {
+    if (!this.draftId) return;
+
+    if (!confirm('¿Está seguro de eliminar este borrador?')) {
+      return;
+    }
+
+    this.loading = true;
+
+    this.draftService.deleteDraft(this.draftId).subscribe({
+      next: () => {
+        this.router.navigate(['/projects']);
+      },
+      error: (error) => {
+        console.error('Error eliminando draft:', error);
+        this.errorMessage = 'Error al eliminar el borrador';
+        this.loading = false;
+      }
+    });
   }
 
+ 
+
+  private restoreDraftData(draft: any): void {
+    const contract = draft.contract || draft.Contract;
+    const serviceOrders = draft.serviceOrders || draft.ServiceOrders;
+    const coordinators = draft.coordinators || draft.Coordinators;
+    
+    if (contract) {
+      this.contractForm.patchValue({
+        contractCode: contract.contractCode || contract.ContractCode,
+        contractName: contract.contractName || contract.ContractName,
+        clientId: contract.clientId || contract.ClientId,
+        startDate: contract.startDate || contract.StartDate,
+        endDate: contract.endDate || contract.EndDate
+      });
+    }
+    if (serviceOrders) {
+      this.serviceOrders = serviceOrders;
+    }
+    if (coordinators) {
+      this.assignedCoordinators = coordinators;
+    }
+  }
+
+
+  canFinalize(): boolean {
+    return this.contractForm.valid &&
+           this.serviceOrders.length > 0 &&
+           this.assignedCoordinators.length > 0;
+  }
+
+  finalizeProject(): void {
+    if (!this.canFinalize()) {
+      this.errorMessage = 'Complete todos los datos requeridos antes de finalizar';
+      return;
+    }
+
+    if (!confirm('¿Está seguro de crear el proyecto? Esto eliminará el borrador.')) {
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    const projectDto = this.buildProjectDto();
+
+    this.projectCreationService.createCompleteProject(projectDto).subscribe({
+      next: (result) => {
+        this.projectResult = result;
+        
+        // Eliminar el draft si existe
+        if (this.draftId) {
+          this.draftService.deleteDraft(this.draftId).subscribe();
+        }
+
+        this.loading = false;
+        this.isDraft = false;
+        this.showFinalDashboard = true;
+      },
+      error: (error) => {
+        console.error('Error creando proyecto:', error);
+        this.errorMessage = 'Error al crear el proyecto: ' + (error.error?.message || error.message);
+        this.loading = false;
+      }
+    });
+  }
+
+  private buildProjectDto(): CreateProject {
+  const contractData = this.contractForm.value;
+
+  const serviceOrders = this.serviceOrders.map(ods => ({
+    OdsCode: ods.odsCode,
+    OdsName: ods.odsName,
+    StartDate: ods.startDate || null,
+    EndDate: ods.endDate || null,
+    SamplingPlans: ods.samplingPlans.map((plan: any) => ({
+      PlanCode: plan.planCode,
+      StartDate: plan.startDate || null,
+      EndDate: plan.endDate || null,
+      Sites: plan.sites.map((site: any) => ({
+        Name: site.name,
+        MatrixId: site.matrixId,
+        ExecutionDate: site.executionDate || null,
+        HasReport: site.hasReport,
+        HasGDB: site.hasGDB
+      })),
+      Resources: {
+        StartDate: plan.resources.startDate || null,
+        EndDate: plan.resources.endDate || null,
+        EmployeeIds: plan.resources.employeeIds,
+        EquipmentIds: plan.resources.equipmentIds,
+        VehicleIds: plan.resources.vehicleIds
+      },
+      Budget: {
+        CHCode: plan.budget.chCode || null,
+        TransportCostChemilab: 0,
+        TransportBilledToClient: 0,
+        LogisticsCostChemilab: 0,
+        LogisticsBilledToClient: 0,
+        SubcontractingCostChemilab: 0,
+        SubcontractingBilledToClient: 0,
+        FluvialTransportCostChemilab: 0,
+        FluvialTransportBilledToClient: 0,
+        ReportsCostChemilab: 0,
+        ReportsBilledToClient: 0,
+        Notes: plan.budget.notes || null
+      }
+    }))
+  }));
+
+  return {
+    Contract: {
+      ContractCode: contractData.contractCode,
+      ContractName: contractData.contractName || '',
+      ClientId: Number(contractData.clientId),
+      StartDate: contractData.startDate || null,
+      EndDate: contractData.endDate || null
+    },
+    ServiceOrders: serviceOrders,
+    CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
+    ProjectDetails: {
+      ProjectName: contractData.contractName || contractData.contractCode,
+      ProjectDescription: '',
+      Priority: 'media'
+    }
+  };
+}
+
   createAnotherProject(): void {
-    this.resetWizard();
+    this.router.navigate(['/projects/new']);
+    window.location.reload();
   }
 
   goToDashboard(): void {
-    this.router.navigate(['/projects']);
+    this.router.navigate(['/projects-dashboard']);
+  }
+
+  // ==========================================
+  // UTILIDADES
+  // ==========================================
+
+  get getClientName(): string {
+    const clientId = this.contractForm.value.clientId;
+    const client = this.clients.find(c => c.id === Number(clientId));
+    return client?.name || 'No asignado';
+  }
+
+  getTimeSinceLastSave(): string {
+    if (!this.lastSaved) return 'Nunca';
+    
+    const seconds = Math.floor((new Date().getTime() - this.lastSaved.getTime()) / 1000);
+    
+    if (seconds < 60) return 'hace unos segundos';
+    if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} min`;
+    return `hace ${Math.floor(seconds / 3600)} horas`;
+  }
+
+  private generateId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  get progressPercentage(): number {
+    let completed = 0;
+    let total = 5;
+
+    if (this.contractForm.valid) completed++;
+    if (this.serviceOrders.length > 0) completed++;
+    if (this.serviceOrders.some(ods => ods.samplingPlans.length > 0)) completed++;
+    if (this.assignedCoordinators.length > 0) completed++;
+    if (this.canFinalize()) completed++;
+
+    return Math.round((completed / total) * 100);
+  }
+
+  // Categorías de presupuesto para el select
+  get budgetCategories() {
+    return Object.values(BudgetCategory);
+  }
+
+  // ==========================================
+  // GETTERS PARA EL TEMPLATE
+  // ==========================================
+
+  get hasAnyPlans(): boolean {
+    return this.serviceOrders.some(ods => ods.samplingPlans.length > 0);
+  }
+
+  get totalPlansCount(): number {
+    return this.serviceOrders.reduce((total, ods) => total + ods.samplingPlans.length, 0);
   }
 }

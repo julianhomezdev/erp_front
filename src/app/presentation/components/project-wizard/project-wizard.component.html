@@ -1,641 +1,893 @@
-<div *ngIf="!showFinalDashboard" class="min-h-screen bg-gray-50 py-4 px-4">
-  <div class="max-w-7xl mx-auto">
-
-    <div *ngIf="errorMessage" class="bg-red-50 border-l-4 border-red-600 p-4 mb-6 rounded-lg shadow-sm">
-      <div class="flex">
-        <svg class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-        </svg>
-        <p class="ml-3 text-sm text-red-800">{{ errorMessage }}</p>
+<!-- DASHBOARD FINAL -->
+<div *ngIf="showFinalDashboard" class="min-h-screen bg-gray-50 py-12 px-4">
+  <div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-sm p-8 mb-8 border-l-4 border-emerald-600">
+      <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 mb-4">
+          <svg class="h-10 w-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-semibold text-gray-900 mb-2">Proyecto Creado Exitosamente</h2>
+        <p class="text-gray-600 mb-6">
+          El proyecto ha sido registrado con todas sus órdenes de servicio, planes de muestreo y recursos asignados.
+        </p>
+        <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+          <p class="text-sm text-gray-600 font-medium mb-1">ID del Proyecto</p>
+          <p class="text-2xl font-semibold text-gray-900">{{ projectResult }}</p>
+        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+    <div class="flex justify-center gap-4">
+      <button (click)="createAnotherProject()"
+        class="px-6 py-2.5 bg-gray-900 text-white rounded-md font-medium hover:bg-gray-800 transition-colors">
+        Crear Nuevo Proyecto
+      </button>
+      <button (click)="goToDashboard()"
+        class="px-6 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-md font-medium hover:bg-gray-50 transition-colors">
+        Ir al Panel Principal
+      </button>
+    </div>
+  </div>
+</div>
 
-      <div class="bg-gradient-to-r from-gray-800 to-gray-900 px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div *ngFor="let step of steps; let i = index" class="flex items-center flex-1">
-            <div class="flex flex-col items-center flex-1">
-              <div [class]="'relative w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 ' + 
-                (currentStep > step.id ? 'bg-green-600 text-white' : 
-                 currentStep === step.id ? 'bg-white text-gray-900 shadow-lg' : 
-                 'bg-gray-600 text-white')">
-                <span *ngIf="currentStep <= step.id">{{ step.icon }}</span>
-                <svg *ngIf="currentStep > step.id" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </div>
-              <div class="mt-2 text-center">
-                <p [class]="'text-xs font-semibold ' + (currentStep === step.id ? 'text-white' : 'text-gray-300')">
-                  {{ step.title }}
-                </p>
-              </div>
-            </div>
-            <div *ngIf="i < steps.length - 1" [class]="'h-0.5 flex-1 mx-2 transition-all duration-300 mt-[-30px] ' + 
-                 (currentStep > step.id ? 'bg-green-500' : 'bg-gray-600')"></div>
+<!-- VISTA PRINCIPAL -->
+<div *ngIf="!showFinalDashboard" class="min-h-screen bg-gray-50 py-6 px-4">
+  <div class="max-w-7xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border-l-4 border-gray-900">
+      <div class="flex items-center justify-between">
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h1 class="text-xl font-semibold text-gray-900">
+              {{ contractForm.value.contractCode || 'Nuevo Proyecto' }}
+            </h1>
+            <span *ngIf="isDraft" class="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded border border-amber-200">
+              Borrador
+            </span>
+          </div>
+          
+          <p class="text-sm text-gray-600">
+            Cliente: <span class="font-medium text-gray-900">{{ getClientName }}</span>
+          </p>
+          
+          <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+            <span *ngIf="lastSaved" class="flex items-center">
+              <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Guardado {{ getTimeSinceLastSave() }}
+            </span>
+            <span *ngIf="autoSaving" class="flex items-center text-gray-600">
+              <svg class="animate-spin w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Guardando...
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-2xl font-semibold text-gray-900">{{ progressPercentage }}%</div>
+            <div class="text-xs text-gray-500">Completado</div>
+          </div>
+
+          <div class="flex gap-2">
+            <button (click)="saveDraft(false)" [disabled]="loading || !contractForm.valid"
+              class="px-4 py-2 bg-gray-900 text-white text-sm rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              Guardar Borrador
+            </button>
+            
+            <button *ngIf="draftId" (click)="deleteDraft()" [disabled]="loading"
+              class="px-4 py-2 bg-white text-red-600 border border-red-300 text-sm rounded-md font-medium hover:bg-red-50 disabled:opacity-50 transition-colors">
+              Eliminar
+            </button>
           </div>
         </div>
       </div>
 
-      <div class="p-8">
-
-        <div *ngIf="currentStep === 1" class="space-y-6 animate-fadeIn">
-          <div class="border-b border-gray-200 pb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-              <span class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-lg">1</span>
-              Datos del Contrato
-            </h2>
-            <p class="text-sm text-gray-600 mt-2 ml-13">Información básica del contrato</p>
-          </div>
-
-          <form [formGroup]="contractForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="md:col-span-2">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Código del Contrato <span class="text-red-600">*</span>
-              </label>
-              <input type="text" formControlName="contractCode"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                placeholder="Ej: CON-2026-001" />
-            </div>
-            
-            <div class="md:col-span-2">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Nombre del Contrato
-              </label>
-              <input type="text" formControlName="contractName"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                placeholder="Ej: Monitoreo Ambiental 2026" />
-            </div>
-            
-            <div class="md:col-span-2">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Cliente <span class="text-red-600">*</span>
-              </label>
-              <select formControlName="clientId"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                <option value="">Seleccione un cliente</option>
-                <option *ngFor="let client of clients" [value]="client.id">{{ client.name }}</option>
-              </select>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha de Inicio</label>
-              <input type="date" formControlName="startDate"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha de Finalización</label>
-              <input type="date" formControlName="endDate"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-            </div>
-          </form>
+      <!-- Barra de progreso -->
+      <div class="mt-4">
+        <div class="w-full bg-gray-200 rounded-full h-1.5">
+          <div class="bg-gray-900 h-1.5 rounded-full transition-all duration-300" [style.width.%]="progressPercentage"></div>
         </div>
-
-        <div *ngIf="currentStep === 2" class="space-y-6 animate-fadeIn">
-          <div class="border-b border-gray-200 pb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-              <span class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-lg">2</span>
-              Órdenes de Servicio (ODS)
-            </h2>
-            <p class="text-sm text-gray-600 mt-2 ml-13">Agregue las ODS del contrato</p>
-          </div>
-
-          <div *ngIf="serviceOrders.length > 0" class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">ODS Configuradas ({{ serviceOrders.length }})</h3>
-            
-            <div class="space-y-3">
-              <div *ngFor="let ods of serviceOrders; let i = index" class="bg-white rounded-lg p-4 border-2 border-gray-200">
-                <div class="flex justify-between items-start">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <span class="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded">{{ ods.odsCode }}</span>
-                      <span class="text-sm text-gray-600">{{ ods.odsName }}</span>
-                      <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">{{ ods.samplingPlans.length }} planes</span>
-                    </div>
-                    <button (click)="selectOdsForPlans(i)" type="button"
-                      class="mt-2 px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                      Agregar Planes de Muestreo
-                    </button>
-                  </div>
-                  
-                  <button type="button" (click)="removeServiceOrder(i)"
-                    class="ml-4 text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-gray-50 rounded-lg p-6 border-2 border-gray-300">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Agregar Nueva ODS</h3>
-            
-            <form [formGroup]="odsForm" class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Código ODS <span class="text-red-600">*</span>
-                  </label>
-                  <input type="text" formControlName="odsCode"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    placeholder="Ej: ODS-001" />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre ODS</label>
-                  <input type="text" formControlName="odsName"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    placeholder="Opcional" />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Inicio</label>
-                  <input type="date" formControlName="startDate"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Fin</label>
-                  <input type="date" formControlName="endDate"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                </div>
-              </div>
-
-              <div class="flex justify-end">
-                <button type="button" (click)="addServiceOrder()"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 flex items-center">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                  </svg>
-                  Agregar ODS
-                </button>
-              </div>
-            </form>
-          </div>
+        <div class="flex justify-between mt-2 text-xs text-gray-600">
+          <span [class.text-gray-900]="contractForm.valid" [class.font-medium]="contractForm.valid">Contrato</span>
+          <span [class.text-gray-900]="serviceOrders.length > 0" [class.font-medium]="serviceOrders.length > 0">
+            {{ serviceOrders.length }} ODS
+          </span>
+          <span [class.text-gray-900]="hasAnyPlans" [class.font-medium]="hasAnyPlans">
+            {{ totalPlansCount }} Planes
+          </span>
+          <span [class.text-gray-900]="assignedCoordinators.length > 0" [class.font-medium]="assignedCoordinators.length > 0">
+            {{ assignedCoordinators.length }} Coordinadores
+          </span>
         </div>
+      </div>
+    </div>
 
-        <div *ngIf="currentStep === 3 && currentOdsIndex === -1" class="space-y-6 animate-fadeIn">
-          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-            <p class="text-sm text-yellow-800">
-              <strong>Instrucción:</strong> Vuelva al paso 2 y seleccione una ODS para agregar planes de muestreo.
+    <!-- ALERTAS -->
+    <div *ngIf="errorMessage" class="bg-red-50 border-l-4 border-red-600 p-4 mb-6 rounded-md shadow-sm">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <p class="text-sm text-red-800">{{ errorMessage }}</p>
+        </div>
+        <button (click)="errorMessage = ''" class="text-red-500 hover:text-red-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="successMessage" class="bg-emerald-50 border-l-4 border-emerald-600 p-4 mb-6 rounded-md shadow-sm">
+      <div class="flex items-center">
+        <svg class="h-5 w-5 text-emerald-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <p class="text-sm text-emerald-800">{{ successMessage }}</p>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 mb-6">
+      <div class="flex border-b border-gray-200">
+        <button (click)="currentView = ViewMode.CONTRACT" [disabled]="loading"
+          [class]="'flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 ' + 
+            (currentView === ViewMode.CONTRACT ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50')">
+          Contrato
+        </button>
+        <button (click)="currentView = ViewMode.ODS_LIST; currentOdsIndex = -1" [disabled]="!contractForm.valid || loading"
+          [class]="'flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 ' + 
+            (currentView === ViewMode.ODS_LIST ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed')">
+          Órdenes de Servicio ({{ serviceOrders.length }})
+        </button>
+        <button (click)="currentView = ViewMode.ODS_LIST" [disabled]="serviceOrders.length === 0 || loading"
+          [class]="'flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 ' + 
+            (currentView === ViewMode.PLAN_FORM ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed')">
+          Planes de Muestreo
+        </button>
+      </div>
+    </div>
+
+    <!-- VISTA: CONTRATO -->
+    <div *ngIf="currentView === ViewMode.CONTRACT" class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div class="border-b border-gray-200 pb-4 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900">Información del Contrato</h2>
+        <p class="text-sm text-gray-600 mt-1">Complete los datos básicos del contrato</p>
+      </div>
+
+      <form [formGroup]="contractForm" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Código del Contrato <span class="text-red-600">*</span>
+            </label>
+            <input type="text" formControlName="contractCode"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+              placeholder="Ej: CON-2026-001" />
+            <p *ngIf="contractForm.get('contractCode')?.invalid && contractForm.get('contractCode')?.touched" 
+               class="text-xs text-red-600 mt-1">
+              Este campo es requerido
             </p>
           </div>
+          
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Nombre del Contrato
+            </label>
+            <input type="text" formControlName="contractName"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+              placeholder="Ej: Monitoreo Ambiental 2026" />
+          </div>
+          
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Cliente <span class="text-red-600">*</span>
+            </label>
+            <select formControlName="clientId"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm">
+              <option value="">Seleccione un cliente</option>
+              <option *ngFor="let client of clients" [value]="client.id">{{ client.name }}</option>
+            </select>
+            <p *ngIf="contractForm.get('clientId')?.invalid && contractForm.get('clientId')?.touched" 
+               class="text-xs text-red-600 mt-1">
+              Debe seleccionar un cliente
+            </p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Inicio</label>
+            <input type="date" formControlName="startDate"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Finalización</label>
+            <input type="date" formControlName="endDate"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+          </div>
         </div>
 
-        <div *ngIf="currentStep === 3 && currentOdsIndex !== -1" class="space-y-6 animate-fadeIn">
-          <div class="border-b border-gray-200 pb-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-                  <span class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-lg">3</span>
-                  Planes de Muestreo - {{ serviceOrders[currentOdsIndex].odsCode }}
-                </h2>
-                <p class="text-sm text-gray-600 mt-2 ml-13">Configure sitios, recursos y presupuesto por plan</p>
+        <div class="flex justify-end pt-4">
+          <button (click)="currentView = ViewMode.ODS_LIST" [disabled]="!contractForm.valid" type="button"
+            class="px-6 py-2 bg-gray-900 text-white rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+            Continuar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- VISTA: LISTA DE ODS -->
+    <div *ngIf="currentView === ViewMode.ODS_LIST">
+      
+      <!-- ODS existentes -->
+      <div *ngIf="serviceOrders.length > 0" class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">
+          Órdenes de Servicio ({{ serviceOrders.length }})
+        </h3>
+        
+        <div class="space-y-3">
+          <div *ngFor="let ods of serviceOrders; let i = index" 
+               class="bg-gray-50 rounded-md p-4 border border-gray-200 hover:border-gray-300 transition-colors">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="px-2.5 py-1 bg-gray-900 text-white text-xs font-medium rounded">
+                    {{ ods.odsCode }}
+                  </span>
+                  <span class="text-sm text-gray-700 font-medium">{{ ods.odsName }}</span>
+                </div>
+                <div class="flex gap-3 items-center text-xs text-gray-600">
+                  <span class="flex items-center">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    {{ ods.samplingPlans.length }} planes
+                  </span>
+                  <span *ngIf="ods.startDate">{{ ods.startDate }}</span>
+                </div>
               </div>
-              <button (click)="backToOdsList()" type="button"
-                class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                ← Volver a ODS
+              
+              <button type="button" (click)="removeServiceOrder(i)"
+                class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <button (click)="selectOdsForPlans(i)" type="button"
+              class="w-full mt-3 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+              Gestionar Planes de Muestreo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nueva ODS -->
+      <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">
+          Agregar Orden de Servicio
+        </h3>
+        
+        <form [formGroup]="odsForm" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Código ODS <span class="text-red-600">*</span>
+              </label>
+              <input type="text" formControlName="odsCode"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                placeholder="Ej: ODS-118631" />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre ODS</label>
+              <input type="text" formControlName="odsName"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                placeholder="Ej: Tocancipá" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio</label>
+              <input type="date" formControlName="startDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Fin</label>
+              <input type="date" formControlName="endDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="button" (click)="addServiceOrder()" [disabled]="!odsForm.valid"
+              class="px-6 py-2 bg-gray-900 text-white rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+              Agregar ODS
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Coordinadores -->
+      <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">
+          Coordinadores del Proyecto
+        </h3>
+
+        <div *ngIf="assignedCoordinators.length > 0" class="mb-4">
+          <div class="flex flex-wrap gap-2">
+            <div *ngFor="let coord of assignedCoordinators; let i = index" 
+                 class="inline-flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5">
+              <span class="text-sm font-medium text-gray-900">{{ coord.coordinatorName }}</span>
+              <button type="button" (click)="removeCoordinator(i)"
+                class="ml-2 text-gray-400 hover:text-red-600 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
               </button>
             </div>
           </div>
+        </div>
 
-          <div *ngIf="serviceOrders[currentOdsIndex].samplingPlans.length > 0" class="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Planes Configurados ({{ serviceOrders[currentOdsIndex].samplingPlans.length }})</h3>
-            
-            <div class="space-y-3">
-              <div *ngFor="let plan of serviceOrders[currentOdsIndex].samplingPlans; let idx = index" class="bg-white rounded-lg p-4 border-2 border-gray-200">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1">
-                    <span class="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded">{{ plan.planCode }}</span>
-                    <span class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{{ plan.sites.length }} sitios</span>
-                    <span class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${{ getPlanBudgetTotal(plan).toLocaleString() }}</span>
-                  </div>
-                  <button type="button" (click)="removePlanFromOds(currentOdsIndex, idx)"
-                    class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                  </button>
+        <form [formGroup]="coordinatorForm" class="flex gap-3">
+          <select formControlName="coordinatorId"
+            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm">
+            <option value="">Seleccione un coordinador</option>
+            <option *ngFor="let coord of coordinators" [value]="coord.id">{{ coord.name }}</option>
+          </select>
+
+          <button type="button" (click)="addCoordinator()" [disabled]="!coordinatorForm.valid"
+            class="px-4 py-2 bg-gray-900 text-white rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+            Agregar
+          </button>
+        </form>
+      </div>
+
+      <!-- Finalizar -->
+      <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900 mb-1">Finalizar Proyecto</h3>
+            <p class="text-sm text-gray-600 mb-3">
+              Verifique que toda la información esté completa antes de continuar
+            </p>
+            <ul class="text-xs text-gray-600 space-y-1">
+              <li [class.text-gray-900]="contractForm.valid" [class.font-medium]="contractForm.valid">
+                {{ contractForm.valid ? '✓' : '○' }} Contrato completo
+              </li>
+              <li [class.text-gray-900]="serviceOrders.length > 0" [class.font-medium]="serviceOrders.length > 0">
+                {{ serviceOrders.length > 0 ? '✓' : '○' }} Al menos 1 ODS
+              </li>
+              <li [class.text-gray-900]="assignedCoordinators.length > 0" [class.font-medium]="assignedCoordinators.length > 0">
+                {{ assignedCoordinators.length > 0 ? '✓' : '○' }} Al menos 1 coordinador
+              </li>
+            </ul>
+          </div>
+
+          <button (click)="finalizeProject()" [disabled]="!canFinalize() || loading"
+            class="px-6 py-2.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            {{ loading ? 'Creando...' : 'Crear Proyecto' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: PLAN DE MUESTREO -->
+    <div *ngIf="currentView === ViewMode.PLAN_FORM && currentOdsIndex !== -1">
+      
+      <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">
+              Planes de Muestreo - {{ serviceOrders[currentOdsIndex].odsCode }}
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">Configure sitios, recursos y presupuesto</p>
+          </div>
+          <button (click)="backToOdsList()" type="button"
+            class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-sm">
+            Volver
+          </button>
+        </div>
+      </div>
+
+      <!-- Planes existentes -->
+      <div *ngIf="serviceOrders[currentOdsIndex].samplingPlans.length > 0" 
+           class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">
+          Planes Configurados ({{ serviceOrders[currentOdsIndex].samplingPlans.length }})
+        </h3>
+        
+        <div class="space-y-3">
+          <div *ngFor="let plan of serviceOrders[currentOdsIndex].samplingPlans; let idx = index" 
+               class="bg-gray-50 rounded-md p-4 border border-gray-200">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <span class="px-2.5 py-1 bg-gray-900 text-white text-xs font-medium rounded">
+                  {{ plan.planCode }}
+                </span>
+                <div class="flex gap-3 mt-2 text-xs text-gray-600">
+                  <span>{{ plan.sites.length }} sitios</span>
+                  <span>${{ getPlanBudgetTotal(plan).toLocaleString() }}</span>
                 </div>
-                <div class="text-xs text-gray-600 ml-1">
+                <div class="text-xs text-gray-600 mt-2 space-y-0.5">
                   <p *ngIf="plan.resources.employees?.length">Personal: {{ plan.resources.employees.length }}</p>
                   <p *ngIf="plan.resources.equipment?.length">Equipos: {{ plan.resources.equipment.length }}</p>
                   <p *ngIf="plan.resources.vehicles?.length">Vehículos: {{ plan.resources.vehicles.length }}</p>
                 </div>
               </div>
+              <button type="button" (click)="removePlanFromOds(currentOdsIndex, idx)"
+                class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario nuevo plan -->
+      <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900 mb-6">Nuevo Plan de Muestreo</h3>
+        
+        <form [formGroup]="planForm" class="space-y-8">
+          
+          <!-- Información básica -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+              Información Básica
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  Código del Plan <span class="text-red-600">*</span>
+                </label>
+                <input type="text" formControlName="planCode"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  placeholder="Ej: PM-001" />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio</label>
+                <input type="date" formControlName="startDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Fin</label>
+                <input type="date" formControlName="endDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+              </div>
             </div>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-6 border-2 border-gray-300">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo Plan de Muestreo</h3>
-            
-            <form [formGroup]="planForm" class="space-y-6">
-              
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Código del Plan <span class="text-red-600">*</span>
-                  </label>
-                  <input type="text" formControlName="planCode"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    placeholder="Ej: PM-001" />
-                </div>
+          <!-- Sitios -->
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="text-sm font-semibold text-gray-900 pb-2 border-b border-gray-200 flex-1">
+                Sitios de Monitoreo <span class="text-red-600">*</span>
+              </h4>
+              <button type="button" (click)="addSite()"
+                class="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
+                Agregar Sitio
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              <div *ngFor="let siteControl of sitesArray.controls; let idx = index" 
+                   [formGroup]="$any(siteControl)" 
+                   class="bg-gray-50 p-4 rounded-md border border-gray-200">
                 
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Inicio Plan</label>
-                  <input type="date" formControlName="startDate"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Fin Plan</label>
-                  <input type="date" formControlName="endDate"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                </div>
-              </div>
-
-              <div class="border-t pt-4">
-                <h4 class="text-md font-bold text-gray-900 mb-3">Sitios de Monitoreo</h4>
-                
-                <div class="mb-4">
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Cantidad de Sitios</label>
-                  <input type="number" formControlName="sitesCount" (change)="updateSitesCount()" min="1"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                </div>
-
-                <div *ngIf="sitesArray.length > 0" class="space-y-3">
-                  <div *ngFor="let siteControl of sitesArray.controls; let idx = index" 
-                       [formGroup]="$any(siteControl)" 
-                       class="bg-white p-4 rounded-lg border-2 border-gray-200">
-                    
-                    <div class="flex justify-between items-center mb-3">
-                      <h5 class="font-bold text-gray-900">Sitio {{ idx + 1 }}</h5>
-                      <button type="button" (click)="removeSite(idx)" *ngIf="sitesArray.length > 1"
-                        class="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre <span class="text-red-600">*</span></label>
-                        <input type="text" formControlName="name"
-                          class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm" />
-                      </div>
-
-                      <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Matriz <span class="text-red-600">*</span></label>
-                        <select formControlName="matrixId"
-                          class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm">
-                          <option value="">Seleccione</option>
-                          <option *ngFor="let matrix of matrices" [value]="matrix.id">{{ matrix.matrixName }}</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Ejecución</label>
-                        <input type="date" formControlName="executionDate"
-                          class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm" />
-                      </div>
-
-                      <div class="flex items-center gap-6 pt-6">
-                        <label class="flex items-center">
-                          <input type="checkbox" formControlName="hasReport" class="w-5 h-5 rounded" />
-                          <span class="ml-2 text-sm font-semibold">Informe</span>
-                        </label>
-
-                        <label class="flex items-center">
-                          <input type="checkbox" formControlName="hasGDB" class="w-5 h-5 rounded" />
-                          <span class="ml-2 text-sm font-semibold">GDB</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="border-t pt-4">
-                <h4 class="text-md font-bold text-gray-900 mb-3">Recursos del Plan</h4>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Inicio Asignación</label>
-                    <input type="date" formControlName="resourceStartDate"
-                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha Fin Asignación</label>
-                    <input type="date" formControlName="resourceEndDate"
-                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div class="bg-white p-3 rounded-lg border-2 border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Personal</h5>
-                    <div class="max-h-60 overflow-y-auto space-y-1">
-                      <div *ngFor="let employee of employees" (click)="toggleEmployeeSelection(employee.id)"
-                        [class]="'p-2 rounded cursor-pointer text-xs ' + 
-                          (isEmployeeSelected(employee.id) ? 'bg-blue-100 border border-blue-600' : 'bg-gray-50 hover:bg-gray-100')">
-                        <p class="font-semibold">{{ employee.firstName }} {{ employee.lastName }}</p>
-                        <p class="text-gray-600">{{ employee.position }}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border-2 border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Equipos</h5>
-                    <div class="max-h-60 overflow-y-auto space-y-1">
-                      <div *ngFor="let equip of equipment" (click)="toggleEquipmentSelection(equip.id)"
-                        [class]="'p-2 rounded cursor-pointer text-xs ' + 
-                          (isEquipmentSelected(equip.id) ? 'bg-blue-100 border border-blue-600' : 'bg-gray-50 hover:bg-gray-100')">
-                        <p class="font-semibold">{{ equip.name }}</p>
-                        <p class="text-gray-600">{{ equip.code }}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border-2 border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Vehículos</h5>
-                    <div class="max-h-60 overflow-y-auto space-y-1">
-                      <div *ngFor="let vehicle of vehicles" (click)="toggleVehicleSelection(vehicle.id)"
-                        [class]="'p-2 rounded cursor-pointer text-xs ' + 
-                          (isVehicleSelected(vehicle.id) ? 'bg-blue-100 border border-blue-600' : 'bg-gray-50 hover:bg-gray-100')">
-                        <p class="font-semibold">{{ vehicle.plateNumber }}</p>
-                        <p class="text-gray-600">{{ vehicle.brand }} {{ vehicle.model }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="border-t pt-4">
-                <h4 class="text-md font-bold text-gray-900 mb-3">Presupuesto del Plan</h4>
-                
-                <div class="mb-4">
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Código CH</label>
-                  <input type="text" formControlName="chCode"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    placeholder="Ej: CH 26 050" />
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="bg-white p-3 rounded-lg border border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Transporte</h5>
-                    <div class="space-y-2">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Costo Chemilab</label>
-                        <input type="number" formControlName="transportCostChemilab" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Facturado Cliente</label>
-                        <input type="number" formControlName="transportBilledToClient" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Logística</h5>
-                    <div class="space-y-2">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Costo Chemilab</label>
-                        <input type="number" formControlName="logisticsCostChemilab" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Facturado Cliente</label>
-                        <input type="number" formControlName="logisticsBilledToClient" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Subcontratación</h5>
-                    <div class="space-y-2">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Costo Chemilab</label>
-                        <input type="number" formControlName="subcontractingCostChemilab" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Facturado Cliente</label>
-                        <input type="number" formControlName="subcontractingBilledToClient" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border border-gray-300">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Transporte Fluvial</h5>
-                    <div class="space-y-2">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Costo Chemilab</label>
-                        <input type="number" formControlName="fluvialTransportCostChemilab" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Facturado Cliente</label>
-                        <input type="number" formControlName="fluvialTransportBilledToClient" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white p-3 rounded-lg border border-gray-300 md:col-span-2">
-                    <h5 class="text-sm font-bold text-gray-900 mb-2">Informes</h5>
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Costo Chemilab</label>
-                        <input type="number" formControlName="reportsCostChemilab" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Facturado Cliente</label>
-                        <input type="number" formControlName="reportsBilledToClient" min="0"
-                          class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300 mt-4">
-                  <div class="flex justify-between items-center">
-                    <span class="text-sm font-semibold">Total Plan:</span>
-                    <span class="text-xl font-bold text-blue-700">${{ getCurrentPlanBudgetTotal().toLocaleString() }}</span>
-                  </div>
-                </div>
-
-                <div class="mt-4">
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Notas</label>
-                  <textarea formControlName="notes" rows="2"
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 resize-none"></textarea>
-                </div>
-              </div>
-
-              <div class="flex justify-end border-t pt-4">
-                <button type="button" (click)="addPlanToCurrentOds()"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 flex items-center">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                  </svg>
-                  Agregar Plan a ODS
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div *ngIf="currentStep === 4" class="space-y-6 animate-fadeIn">
-          <div class="border-b border-gray-200 pb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-              <span class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-lg">4</span>
-              Coordinadores del Proyecto
-            </h2>
-            <p class="text-sm text-gray-600 mt-2 ml-13">Asigne coordinadores</p>
-          </div>
-
-          <div *ngIf="assignedCoordinators.length > 0" class="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Coordinadores Asignados ({{ assignedCoordinators.length }})</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div *ngFor="let coord of assignedCoordinators; let i = index" class="bg-white rounded-lg p-4 border-2 border-gray-200">
-                <div class="flex justify-between items-start">
-                  <p class="text-lg font-bold text-gray-900">{{ coord.coordinatorName }}</p>
-                  <button type="button" (click)="removeCoordinator(i)"
-                    class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                <div class="flex justify-between items-center mb-4">
+                  <h5 class="text-sm font-medium text-gray-900">Sitio {{ idx + 1 }}</h5>
+                  <button type="button" (click)="removeSite(idx)" *ngIf="sitesArray.length > 1"
+                    class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                   </button>
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                      Nombre <span class="text-red-600">*</span>
+                    </label>
+                    <input type="text" formControlName="name"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                      placeholder="Ej: Punto A" />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                      Matriz <span class="text-red-600">*</span>
+                    </label>
+                    <select formControlName="matrixId"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm">
+                      <option value="">Seleccione</option>
+                      <option *ngFor="let matrix of matrices" [value]="matrix.id">{{ matrix.matrixName }}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Ejecución</label>
+                    <input type="date" formControlName="executionDate"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+                  </div>
+
+                  <div class="flex items-center gap-4 pt-6">
+                    <label class="flex items-center cursor-pointer">
+                      <input type="checkbox" formControlName="hasReport" class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <span class="ml-2 text-sm text-gray-700">Informe</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer">
+                      <input type="checkbox" formControlName="hasGDB" class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <span class="ml-2 text-sm text-gray-700">GDB</span>
+                    </label>
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="flex items-center cursor-pointer mb-2">
+                      <input type="checkbox" formControlName="isSubcontracted" 
+                             class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <span class="ml-2 text-sm text-gray-700">Sitio subcontratado</span>
+                    </label>
+
+                    <div *ngIf="siteControl.get('isSubcontracted')?.value" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                      <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                        Proveedor <span class="text-red-600">*</span>
+                      </label>
+                      <input type="text" formControlName="subcontractorName"
+                        class="w-full px-3 py-2 border border-amber-300 rounded-md focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-sm"
+                        placeholder="Ej: Laboratorio XYZ S.A.S" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-6 border-2 border-gray-300">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Agregar Coordinador</h3>
+          <!-- Recursos -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+              Recursos <span class="text-red-600">*</span>
+            </h4>
             
-            <form [formGroup]="coordinatorForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                  Coordinador <span class="text-red-600">*</span>
-                </label>
-                <select formControlName="coordinatorId"
-                  class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                  <option value="">Seleccione</option>
-                  <option *ngFor="let coord of projectCoordinators" [value]="coord.id">{{ coord.name }}</option>
-                </select>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio</label>
+                <input type="date" formControlName="resourceStartDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
               </div>
 
-              <div class="flex justify-end">
-                <button type="button" (click)="addCoordinator()"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 flex items-center">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                  </svg>
-                  Agregar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div *ngIf="currentStep === 5" class="space-y-6 animate-fadeIn">
-          <div class="border-b border-gray-200 pb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-              <span class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-lg">5</span>
-              Resumen del Proyecto
-            </h2>
-            <p class="text-sm text-gray-600 mt-2 ml-13">Revise antes de crear</p>
-          </div>
-
-          <div class="space-y-4">
-            <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Contrato</h3>
-              <p><strong>Código:</strong> {{ contractForm.value.contractCode }}</p>
-              <p><strong>Cliente:</strong> {{ getClientName() }}</p>
-            </div>
-
-            <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Órdenes de Servicio ({{ serviceOrders.length }})</h3>
-              <div *ngFor="let ods of serviceOrders" class="ml-4 mb-2">
-                <p class="font-semibold">{{ ods.odsCode }} - {{ ods.samplingPlans.length }} planes</p>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Fin</label>
+                <input type="date" formControlName="resourceEndDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
               </div>
             </div>
 
-            <div class="bg-white p-4 rounded-lg border-2 border-gray-200">
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Coordinadores ({{ assignedCoordinators.length }})</h3>
-              <div *ngFor="let coord of assignedCoordinators" class="ml-4">
-                <p>• {{ coord.coordinatorName }}</p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <!-- Personal -->
+              <div class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                <h5 class="text-xs font-semibold text-gray-900 mb-2 flex items-center justify-between">
+                  Personal <span class="text-red-600">*</span>
+                  <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                    {{ planForm.value.selectedEmployeeIds.length }}
+                  </span>
+                </h5>
+                <div class="max-h-48 overflow-y-auto space-y-1.5">
+                  <div *ngFor="let employee of employees" 
+                       (click)="toggleEmployeeSelection(employee.id)"
+                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
+                         (isEmployeeSelected(employee.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
+                    <p class="font-medium">{{ employee.firstName }} {{ employee.lastName }}</p>
+                    <p [class]="isEmployeeSelected(employee.id) ? 'text-gray-300' : 'text-gray-600'">{{ employee.position }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Equipos -->
+              <div class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                <h5 class="text-xs font-semibold text-gray-900 mb-2 flex items-center justify-between">
+                  Equipos
+                  <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                    {{ planForm.value.selectedEquipmentIds.length }}
+                  </span>
+                </h5>
+                <div class="max-h-48 overflow-y-auto space-y-1.5">
+                  <div *ngFor="let equip of equipment" 
+                       (click)="toggleEquipmentSelection(equip.id)"
+                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
+                         (isEquipmentSelected(equip.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
+                    <p class="font-medium">{{ equip.name }}</p>
+                    <p [class]="isEquipmentSelected(equip.id) ? 'text-gray-300' : 'text-gray-600'">{{ equip.code }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehículos -->
+              <div class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                <h5 class="text-xs font-semibold text-gray-900 mb-2 flex items-center justify-between">
+                  Vehículos
+                  <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                    {{ planForm.value.selectedVehicleIds.length }}
+                  </span>
+                </h5>
+                <div class="max-h-48 overflow-y-auto space-y-1.5">
+                  <div *ngFor="let vehicle of vehicles" 
+                       (click)="toggleVehicleSelection(vehicle.id)"
+                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
+                         (isVehicleSelected(vehicle.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
+                    <p class="font-medium">{{ vehicle.plateNumber }}</p>
+                    <p [class]="isVehicleSelected(vehicle.id) ? 'text-gray-300' : 'text-gray-600'">{{ vehicle.brand }} {{ vehicle.model }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
+          <!-- Presupuesto -->
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="text-sm font-semibold text-gray-900 pb-2 border-b border-gray-200 flex-1">
+                Presupuesto
+              </h4>
+              <button type="button" (click)="openBudgetItemModal()"
+                class="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
+                Agregar Ítem
+              </button>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Código CH</label>
+              <input type="text" formControlName="chCode"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                placeholder="Ej: CH 26 050" />
+            </div>
+
+            <!-- Ítems presupuesto -->
+            <div *ngIf="budgetItems.length > 0" class="space-y-2 mb-4">
+              <div *ngFor="let item of budgetItems; let idx = index" 
+                   class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded">
+                        {{ item.category }}
+                      </span>
+                      <span class="text-sm font-medium text-gray-900">{{ item.concept }}</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-600">
+                      <span>Cantidad: {{ item.quantity }} {{ item.unit }}</span>
+                      <span>Costo: ${{ calculateItemTotal(item).cost.toLocaleString() }}</span>
+                      <span>Facturado: ${{ calculateItemTotal(item).billed.toLocaleString() }}</span>
+                      <span [class]="calculateItemTotal(item).margin >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                        Margen: {{ calculateItemTotal(item).margin.toFixed(1) }}%
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex gap-1">
+                    <button type="button" (click)="editBudgetItem(idx)"
+                      class="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button type="button" (click)="removeBudgetItem(idx)"
+                      class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen -->
+            <div *ngIf="budgetItems.length > 0" class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+              <h5 class="text-sm font-semibold text-gray-900 mb-3">Resumen por Categoría</h5>
+              <div class="space-y-2">
+                <div *ngFor="let category of planBudgetSummary.byCategory | keyvalue" 
+                     class="flex justify-between items-center text-xs p-2 bg-white rounded border border-gray-200">
+                  <span class="font-medium text-gray-900">{{ category.key }}</span>
+                  <div class="flex gap-3">
+                    <span class="text-gray-600">Costo: ${{ category.value.cost.toLocaleString() }}</span>
+                    <span class="text-gray-600">Facturado: ${{ category.value.billed.toLocaleString() }}</span>
+                    <span class="text-emerald-600">Utilidad: ${{ category.value.profit.toLocaleString() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div class="bg-gray-900 text-white p-4 rounded-md">
+              <div class="flex justify-between items-center">
+                <div>
+                  <p class="text-xs font-medium text-gray-300">TOTAL DEL PLAN</p>
+                  <div class="flex gap-4 mt-1 text-xs">
+                    <span>Costo: ${{ planBudgetSummary.grandTotal.cost.toLocaleString() }}</span>
+                    <span>Facturado: ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}</span>
+                    <span class="text-emerald-400">Utilidad: ${{ planBudgetSummary.grandTotal.profit.toLocaleString() }}</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-2xl font-semibold">
+                    ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}
+                  </div>
+                  <div [class]="'text-xs font-medium ' + (planBudgetSummary.grandTotal.margin >= 0 ? 'text-emerald-400' : 'text-red-400')">
+                    Margen: {{ planBudgetSummary.grandTotal.margin.toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
+              <textarea formControlName="notes" rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none text-sm"
+                placeholder="Observaciones adicionales..."></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button type="button" (click)="addPlanToCurrentOds()" [disabled]="!planForm.valid"
+              class="px-6 py-2.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              Agregar Plan
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div class="bg-gray-50 px-8 py-6 flex justify-between items-center border-t-2 border-gray-200">
-        <button *ngIf="currentStep > 1" (click)="prevStep()" [disabled]="loading"
-          class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          Anterior
-        </button>
-        
-        <div *ngIf="currentStep === 1"></div>
-
-        <div class="flex items-center gap-3">
-          <span class="text-sm text-gray-600">Paso {{ currentStep }} de {{ steps.length }}</span>
-
-          <button *ngIf="currentStep < 5" (click)="nextStep()" [disabled]="!isStepValid() || loading"
-            class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center">
-            Siguiente
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
-
-          <button *ngIf="currentStep === 5" (click)="submitProject()" [disabled]="loading"
-            class="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center">
-            <svg *ngIf="!loading" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            {{ loading ? 'Creando...' : 'Crear Proyecto Completo' }}
-          </button>
-        </div>
-      </div>
-
     </div>
+
   </div>
 </div>
 
-<div *ngIf="showFinalDashboard" class="min-h-screen bg-gray-50 py-12 px-4">
-  <div class="max-w-6xl mx-auto">
-    <div class="bg-white rounded-lg shadow-sm p-8 mb-8 border">
-      <h2 class="text-3xl font-bold text-gray-900 mb-4">✓ Proyecto Creado Exitosamente</h2>
-      <p class="text-gray-600">El proyecto ha sido creado con todas sus ODS, planes de muestreo, recursos y presupuestos.</p>
-      <p class="text-gray-600 mt-2"><strong>ID del Proyecto:</strong> {{ projectResult }}</p>
+<!-- MODAL: PRESUPUESTO -->
+<div *ngIf="showBudgetItemModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-gray-900 px-6 py-4 flex justify-between items-center">
+      <h3 class="text-lg font-semibold text-white">
+        {{ editingBudgetItemIndex === -1 ? 'Agregar' : 'Editar' }} Ítem de Presupuesto
+      </h3>
+      <button (click)="closeBudgetItemModal()" class="text-gray-300 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
     </div>
 
-    <div class="flex justify-center gap-4">
-      <button (click)="createAnotherProject()"
-        class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
-        Crear Otro Proyecto
-      </button>
-      <button (click)="goToDashboard()"
-        class="px-8 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600">
-        Ir al Dashboard
-      </button>
-    </div>
+    <form [formGroup]="budgetItemForm" class="p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Categoría <span class="text-red-600">*</span>
+          </label>
+          <select formControlName="category"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm">
+            <option *ngFor="let cat of budgetCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Concepto <span class="text-red-600">*</span>
+          </label>
+          <input type="text" formControlName="concept"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+            placeholder="Ej: Camioneta alquilada" />
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Proveedor</label>
+          <input type="text" formControlName="provider"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+            placeholder="Ej: NXP 569 (ATBS)" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Cantidad <span class="text-red-600">*</span>
+          </label>
+          <input type="number" formControlName="quantity" min="1"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Unidad <span class="text-red-600">*</span>
+          </label>
+          <input type="text" formControlName="unit"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+            placeholder="Ej: días" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Costo Unitario <span class="text-red-600">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-gray-500 text-sm">$</span>
+            <input type="number" formControlName="costPerUnit" min="0"
+              class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Tarifa Cliente <span class="text-red-600">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-gray-500 text-sm">$</span>
+            <input type="number" formControlName="billedPerUnit" min="0"
+              class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
+          </div>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
+          <textarea formControlName="notes" rows="2"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none text-sm"
+            placeholder="Comentarios adicionales..."></textarea>
+        </div>
+      </div>
+
+      <!-- Vista previa -->
+      <div *ngIf="budgetItemForm.valid" class="bg-gray-50 p-4 rounded-md border border-gray-200">
+        <h4 class="text-sm font-semibold text-gray-900 mb-2">Vista Previa</h4>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div>
+            <span class="text-gray-600">Costo Total:</span>
+            <p class="font-semibold text-gray-900">
+              ${{ (budgetItemForm.value.quantity * budgetItemForm.value.costPerUnit).toLocaleString() }}
+            </p>
+          </div>
+          <div>
+            <span class="text-gray-600">Facturado:</span>
+            <p class="font-semibold text-gray-900">
+              ${{ (budgetItemForm.value.quantity * budgetItemForm.value.billedPerUnit).toLocaleString() }}
+            </p>
+          </div>
+          <div>
+            <span class="text-gray-600">Utilidad:</span>
+            <p class="font-semibold text-emerald-600">
+              ${{ ((budgetItemForm.value.quantity * budgetItemForm.value.billedPerUnit) - (budgetItemForm.value.quantity * budgetItemForm.value.costPerUnit)).toLocaleString() }}
+            </p>
+          </div>
+          <div>
+            <span class="text-gray-600">Margen:</span>
+            <p [class]="'font-semibold ' + (((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) / budgetItemForm.value.billedPerUnit * 100) >= 0 ? 'text-emerald-600' : 'text-red-600')">
+              {{ ((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) / budgetItemForm.value.billedPerUnit * 100).toFixed(2) }}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <button type="button" (click)="closeBudgetItemModal()"
+          class="px-5 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-sm">
+          Cancelar
+        </button>
+        <button type="button" (click)="saveBudgetItem()" [disabled]="!budgetItemForm.valid"
+          class="px-5 py-2 bg-gray-900 text-white rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+          {{ editingBudgetItemIndex === -1 ? 'Agregar' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>
