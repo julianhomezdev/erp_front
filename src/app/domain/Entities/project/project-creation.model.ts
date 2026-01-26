@@ -36,6 +36,10 @@
     ExecutionDate: string | null;
     HasReport: boolean;
     HasGDB: boolean;
+    
+    IsSubcontracted: boolean;
+    SubcontractorName?: string | null;
+    
   }
 
   export interface PlanResources {

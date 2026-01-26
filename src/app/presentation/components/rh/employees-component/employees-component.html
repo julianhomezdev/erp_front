@@ -36,7 +36,7 @@
 
 
             <div
-                class="h-40 rounded-3xl p-4 cursor-pointer"
+                class="h-60 rounded-3xl p-4 cursor-pointer"
                 [ngClass]="{
                     'bg-green-100': item.isAvailable,
                     'bg-red-100': !item.isAvailable
@@ -63,7 +63,7 @@
                         rounded-full bg-green-500 text-black">{{ item.base }}</span>
 
 
-                <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium
+                <span class="inline-flex items-center px-3 py-1 mt-2 text-xs font-medium
                         rounded-full bg-green-500 text-black">{{ item.position }}</span>
 
 
@@ -73,13 +73,8 @@
 
             }
 
-
-
-
         </div>
 
-
     </div>
-
 
 </div>

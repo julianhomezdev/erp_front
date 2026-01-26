@@ -55,50 +55,34 @@ export class VehiclesDashboard implements OnInit, OnDestroy {
     
     
     loadAllData() {
-        
-        this.loading= true;
-        
-        this.error = null;
-        
-        forkJoin({
-            
-            allVehicles: this.vehicleService.getAllVehicles(),
-            
-            avaibleVehicles: this.vehicleService.getAvailableVehiclesWithOutDate(),
-            
-            vehicles: this.vehicleService.getAllVehicles()
-            
-        })
-        
-        .pipe(takeUntil(this.destroy$))
-        
-        .subscribe({
-            
-            next: (response) => {
-                
-                this.vehiclesTotal = response.allVehicles.length;
-                
-                this.avaibleVehicles = response.avaibleVehicles.length;
+    this.loading = true;
+    this.error = null;
 
-                this.vehicles = response.vehicles;
-                                
-                this.loading = false;
-                
-            },
-            error: (err) => {
-                
-                console.error('Error cargando datos de camionetas:', err);
-                
-                this.error= 'Error cargando datos de camionetas';
-                
-                this.loading = false;
-                
-            }
+    forkJoin({
+        allVehicles: this.vehicleService.getAllVehicles(),
+        avaibleVehicles: this.vehicleService.getAvailableVehiclesWithOutDate(),
+        vehicles: this.vehicleService.getAllVehicles()
+    })
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+        next: (response) => {
+            this.vehiclesTotal = response.allVehicles.length;
+            this.avaibleVehicles = response.avaibleVehicles.length;
+            this.vehicles = response.vehicles;
+            this.loading = false;
+        },
+        error: (err) => {
+            console.error('Error detallado:', err);
+            console.error('Status:', err.status);
+            console.error('Status Text:', err.statusText);
+            console.error('URL:', err.url);
+            console.error('Response body:', err.error);
             
-        });
-        
-        
-    }
+            this.error = `Error cargando datos de camionetas: ${err.status} - ${err.statusText}`;
+            this.loading = false;
+        }
+    });
+}
 
 
     onVehicleClick(vehicleId: number) {

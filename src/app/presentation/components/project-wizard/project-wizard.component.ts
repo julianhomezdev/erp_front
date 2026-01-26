@@ -257,6 +257,10 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     const startDate = this.planForm.value.resourceStartDate;
     const endDate = this.planForm.value.resourceEndDate;
 
+    console.log('=== LOADING AVAILABLE RESOURCES ===');
+    console.log('Start Date:', startDate);
+    console.log('End Date:', endDate);
+
     if (!startDate || !endDate) {
       this.availableEmployees = this.employees;
       this.availableEquipment = this.equipment;
@@ -268,21 +272,21 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.resourceDatesSet = true;
     this.loading = true;
 
-    Promise.all([
-      this.employeeService.getAvailableEmployees(startDate, endDate).toPromise(),
-      this.equipmentService.getAvailableEquipment(startDate, endDate).toPromise(),
-      this.vehicleService.getAvailableVehicles(startDate, endDate).toPromise()
-    ]).then(([employees, equipment, vehicles]) => {
-      this.availableEmployees = employees || [];
-      this.availableEquipment = equipment || [];
-      this.availableVehicles = vehicles || [];
-      this.loading = false;
-    }).catch(error => {
-      console.error('Error cargando recursos disponibles:', error);
-      this.availableEmployees = this.employees;
-      this.availableEquipment = this.equipment;
-      this.availableVehicles = this.vehicles;
-      this.loading = false;
+    this.vehicleService.getAvailableVehicles(startDate, endDate).subscribe({
+      next: (vehicles) => {
+        console.log('=== VEHICLES RECEIVED ===');
+        console.log('Count:', vehicles.length);
+        vehicles.forEach(v => {
+          console.log(`Vehicle: ${v.plateNumber}, CostPerDay: ${v.costPerDay}, IsAvailable: ${v.isAvailable}`);
+        });
+        this.availableVehicles = vehicles || [];
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('ERROR loading vehicles:', error);
+        this.availableVehicles = this.vehicles;
+        this.loading = false;
+      }
     });
   }
 
@@ -301,10 +305,15 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     if (index === -1) {
       this.planForm.patchValue({
+        
         selectedVehicleIds: [...current, vehicleId]
+        
       });
+      
       this.addVehicleToBudget(vehicleId);
+      
     } else {
+      
       current.splice(index, 1);
       this.planForm.patchValue({
         selectedVehicleIds: [...current]
@@ -394,7 +403,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       )
       .subscribe(() => {
         if (this.isDraft && this.contractForm.valid) {
-          this.saveDraft(true);
+          //this.saveDraft(true);
         }
       });
   }
@@ -676,7 +685,9 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
         matrixId: Number(site.matrixId),
         matrixName: matrix?.matrixName || '',
         isSubcontracted: site.isSubcontracted,
-        subcontractorName: site.subcontractorName || null,
+        subcontractorName: site.isSubcontracted
+        ? site.subcontractorName?.trim() || null
+        : null,
         executionDate: site.executionDate,
         hasReport: site.hasReport,
         hasGDB: site.hasGDB
@@ -857,6 +868,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   }
 
   deleteDraft(): void {
+    
     if (!this.draftId) return;
 
     if (!confirm('¿Está seguro de eliminar este borrador?')) {
@@ -923,21 +935,38 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     const projectDto = this.buildProjectDto();
 
+    // LOGGING COMPLETO
+    console.log('==========================================');
+    console.log('PROYECTO A ENVIAR AL BACKEND:');
+    console.log('==========================================');
+    console.log(JSON.stringify(projectDto, null, 2));
+    
+    projectDto.ServiceOrders.forEach((ods, odsIdx) => {
+      console.log(`ODS ${odsIdx + 1}: ${ods.OdsCode}`);
+      ods.SamplingPlans.forEach((plan, planIdx) => {
+        console.log(`  Plan ${planIdx + 1}: ${plan.PlanCode}`);
+        console.log(`    Fechas recursos: ${plan.Resources?.StartDate} - ${plan.Resources?.EndDate}`);
+        console.log(`    Vehiculos: ${JSON.stringify(plan.Resources?.VehicleIds)}`);
+        console.log(`    Empleados: ${JSON.stringify(plan.Resources?.EmployeeIds)}`);
+        console.log(`    Equipos: ${JSON.stringify(plan.Resources?.EquipmentIds)}`);
+      });
+    });
+    console.log('==========================================');
+
     this.projectCreationService.createCompleteProject(projectDto).subscribe({
       next: (result) => {
         this.projectResult = result;
-
-        // Eliminar el draft si existe
         if (this.draftId) {
           this.draftService.deleteDraft(this.draftId).subscribe();
         }
-
         this.loading = false;
         this.isDraft = false;
         this.showFinalDashboard = true;
       },
       error: (error) => {
-        console.error('Error creando proyecto:', error);
+        console.error('ERROR COMPLETO:', error);
+        console.error('ERROR RESPONSE:', error.error);
+        console.error('ERROR STATUS:', error.status);
         this.errorMessage = 'Error al crear el proyecto: ' + (error.error?.message || error.message);
         this.loading = false;
       }
@@ -992,14 +1021,27 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
 
   private buildProjectDto(): CreateProject {
-    const contractData = this.contractForm.value;
+  const contractData = this.contractForm.value;
 
-    const serviceOrders = this.serviceOrders.map(ods => ({
-      OdsCode: ods.odsCode,
-      OdsName: ods.odsName,
-      StartDate: ods.startDate || null,
-      EndDate: ods.endDate || null,
-      SamplingPlans: ods.samplingPlans.map((plan: any) => ({
+  const serviceOrders = this.serviceOrders.map(ods => ({
+    OdsCode: ods.odsCode,
+    OdsName: ods.odsName,
+    StartDate: ods.startDate || null,
+    EndDate: ods.endDate || null,
+    SamplingPlans: ods.samplingPlans.map((plan: any) => {
+      
+      const resourceStartDate = plan.resources?.startDate;
+      const resourceEndDate = plan.resources?.endDate;
+      
+      console.log(`Plan ${plan.planCode} - Fechas recursos:`, {
+        startDate: resourceStartDate,
+        endDate: resourceEndDate,
+        hasResources: !!(plan.resources?.employeeIds?.length || 
+                        plan.resources?.equipmentIds?.length || 
+                        plan.resources?.vehicleIds?.length)
+      });
+
+      return {
         PlanCode: plan.planCode,
         StartDate: plan.startDate || null,
         EndDate: plan.endDate || null,
@@ -1008,40 +1050,41 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
           MatrixId: site.matrixId,
           ExecutionDate: site.executionDate || null,
           HasReport: site.hasReport,
-          HasGDB: site.hasGDB
+          HasGDB: site.hasGDB,
+          IsSubcontracted: site.isSubcontracted,
+          SubcontractorName: site.isSubcontracted ? (site.subcontractorName?.trim() || null) : null
         })),
+
         Resources: {
-          StartDate: plan.resources.startDate || null,
-          EndDate: plan.resources.endDate || null,
-          EmployeeIds: plan.resources.employeeIds,
-          EquipmentIds: plan.resources.equipmentIds,
-          VehicleIds: plan.resources.vehicleIds
+          StartDate: resourceStartDate || null,
+          EndDate: resourceEndDate || null,
+          EmployeeIds: plan.resources?.employeeIds || [],
+          EquipmentIds: plan.resources?.equipmentIds || [],
+          VehicleIds: plan.resources?.vehicleIds || []
         },
-        Budget: this.calculatePlanBudgetTotals(plan.budget.items || [])
-      }))
-    }));
+        
+        Budget: this.calculatePlanBudgetTotals(plan.budget?.items || [])
+      };
+    })
+  }));
 
-
-
-
-
-    return {
-      Contract: {
-        ContractCode: contractData.contractCode,
-        ContractName: contractData.contractName || '',
-        ClientId: Number(contractData.clientId),
-        StartDate: contractData.startDate || null,
-        EndDate: contractData.endDate || null
-      },
-      ServiceOrders: serviceOrders,
-      CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
-      ProjectDetails: {
-        ProjectName: contractData.contractName || contractData.contractCode,
-        ProjectDescription: '',
-        Priority: 'media'
-      }
-    };
-  }
+  return {
+    Contract: {
+      ContractCode: contractData.contractCode,
+      ContractName: contractData.contractName || '',
+      ClientId: Number(contractData.clientId),
+      StartDate: contractData.startDate || null,
+      EndDate: contractData.endDate || null
+    },
+    ServiceOrders: serviceOrders,
+    CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
+    ProjectDetails: {
+      ProjectName: contractData.contractName || contractData.contractCode,
+      ProjectDescription: '',
+      Priority: 'media'
+    }
+  };
+}
 
   createAnotherProject(): void {
     this.router.navigate(['/projects/new']);
@@ -1052,9 +1095,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/projects-dashboard']);
   }
 
-  // ==========================================
-  // UTILIDADES
-  // ==========================================
 
   get getClientName(): string {
     const clientId = this.contractForm.value.clientId;

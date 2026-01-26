@@ -13,7 +13,7 @@ export class VehicleService {
   private http = inject(HttpClient);
   
   
-  private apiUrl = `${environment.apiUrl}/vehicle`;
+  private apiUrl = `${environment.apiUrl}/Vehicle`;
 
   getAllVehicles(): Observable<Vehicle[]> {
     
@@ -30,7 +30,7 @@ export class VehicleService {
   getAvailableVehiclesWithOutDate(): Observable<Vehicle[]> {
     
     
-    return this.http.get<Vehicle[]>(`${this.apiUrl}/available`);
+    return this.http.get<Vehicle[]>(`${this.apiUrl}/available/all`);
     
     
   }
