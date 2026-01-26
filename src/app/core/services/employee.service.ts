@@ -21,4 +21,9 @@ export class EmployeeService {
   getEmployeesByBase(base: string): Observable<Employee[]> {
     return this.http.get<Employee[]>(`${this.apiUrl}/base/${base}`);
   }
+
+
+  getAvailableEmployees(startDate: string, endDate: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/available?startDate=${startDate}&endDate=${endDate}`);
+  }
 }

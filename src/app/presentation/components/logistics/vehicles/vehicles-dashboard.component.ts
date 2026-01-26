@@ -2,44 +2,42 @@ import { CommonModule } from "@angular/common";
 import { Component, inject, OnDestroy, OnInit } from "@angular/core";
 import { VehicleService } from "../../../../core/services/vehicle.service";
 import { forkJoin, Subject, takeUntil } from "rxjs";
-import { EmployeeService } from "../../../../core/services/employee.service";
+import { Vehicle } from "../../../../domain/Entities/vehicle/vehicle.model";
+import { Router } from "@angular/router";
 
 @Component({
-    
-    selector: 'logistics-dashbaord-view',
+
+    selector: 'vehicles-dashboard',
     standalone: true,
     imports: [CommonModule],
-    templateUrl: './dashboard-view.component.html'
-    
+    templateUrl: './vehicles-dashboard.component.html'
+
+
+
 })
 
+export class VehiclesDashboard implements OnInit, OnDestroy {
 
 
-export class LogisticsDashboard implements OnInit, OnDestroy {
-    
     // Camionetas
     vehiclesTotal = 0;
     avaibleVehicles = 0;
-    
-    // Personas
-    employeesTotal = 0;
-    
-    
-    
+    vehicles :Vehicle[] = [];
     loading = false;
     error : string | null = null;
     
     
-    private vehicleService = inject(VehicleService)
-    private employeeService = inject(EmployeeService)
-    
-    
+    private vehicleService = inject(VehicleService);
+    private router = inject(Router);
     private destroy$ = new Subject<void>();
+    
     
     
     ngOnDestroy(): void {
         
-        
+        this.destroy$.next();
+
+        this.destroy$.complete();
         
     }
     
@@ -68,7 +66,7 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
             
             avaibleVehicles: this.vehicleService.getAvailableVehiclesWithOutDate(),
             
-            allEmployees: this.employeeService.getAllEmployees()
+            vehicles: this.vehicleService.getAllVehicles()
             
         })
         
@@ -81,17 +79,17 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
                 this.vehiclesTotal = response.allVehicles.length;
                 
                 this.avaibleVehicles = response.avaibleVehicles.length;
-                
-                this.employeesTotal = response.allEmployees.length;
-                
+
+                this.vehicles = response.vehicles;
+                                
                 this.loading = false;
                 
             },
             error: (err) => {
                 
-                console.error('Error cargando datos:', err);
+                console.error('Error cargando datos de camionetas:', err);
                 
-                this.error= 'Error al cargar datos';
+                this.error= 'Error cargando datos de camionetas';
                 
                 this.loading = false;
                 
@@ -101,18 +99,18 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
         
         
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-  
-    
-    
-    
-    
+
+
+    onVehicleClick(vehicleId: number) {
+
+         this.router.navigate(['/logistics/vehicles', vehicleId]);
+
+    }
+
+    onAddVehicle() {
+
+        this.router.navigate(['/logistics/vehicles', 'new']);
+
+    }
+
 }

@@ -1,0 +1,95 @@
+<div class="w-full h-screen flex flex-col items-center pt-5 gap-5">
+    
+    <!--Equipments section-->
+    <div class="w-11/12 h-auto bg-white  p-8 rounded-3xl border border-gray-200 ">
+        
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Equipos</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Total Equipos -->
+            <div class="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-l-4 border-blue-500 cursor-pointer">
+                <p class="text-sm text-gray-600 font-medium mb-2">Total equipos</p>
+                <p class="text-4xl font-bold text-gray-800">{{ equipmentsTotal }}</p>
+            </div>
+            
+            <!-- Camionetas Disponibles -->
+            <!--<div class="bg-linear-to-br from-green-50 to-green-100 p-6 rounded-xl border-l-4 border-green-500 cursor-pointer">
+                <p class="text-sm text-gray-600 font-medium mb-2">Camionetas disponibles</p>
+                <p class="text-4xl font-bold text-gray-800">{{ avaibleVehicles }}</p>
+                <p class="text-sm text-gray-500 mt-1">de {{ vehiclesTotal }}</p>
+            </div>-->
+            
+
+            <button
+                class="mt-4 self-end inline-flex items-center gap-2
+                    px-4 py-2 text-sm font-semibold bg-blue-100
+                    text-black  border-l-8 border-blue-500 rounded-full cursor-pointer
+                    "
+            >
+                + Agregar equipo
+            </button>
+
+           
+            
+        </div>
+        
+    </div>
+
+    <div 
+        
+        class="w-11/12 h-auto bg-white  p-8 rounded-3xl border border-gray-200 flex justify-center">
+
+        <div class="w-full  h-auto grid grid-cols-4 gap-4 cursor-pointer">
+
+
+            @for (item of equipments; track $index) {
+
+
+            <div
+                 class="h-40 rounded-3xl p-4 cursor-pointer"
+                    [ngClass]="{
+                    'bg-green-100': item.isAvailable,
+                    'bg-red-100': !item.isAvailable
+                    }"
+
+                class="h-30 rounded-3xl p-4 cursor-pointer"
+            
+            >
+        
+                <h3 class="text-lg font-semibold text-gray-800 tracking-wide">{{item.code}}</h3>
+
+                @if (item.isAvailable === true) {
+
+
+                <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium
+                        rounded-full bg-green-500 text-black">Disponible</span>
+
+                }
+                @else {
+
+                <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium
+                        rounded-full bg-green-500 text-black">No Disponible</span>
+
+                }
+
+
+  
+
+                
+        
+
+            </div>
+
+            }
+
+            
+
+
+        </div>
+
+
+    </div>
+
+ 
+</div>

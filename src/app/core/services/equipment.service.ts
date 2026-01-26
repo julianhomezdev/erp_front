@@ -9,6 +9,7 @@ import { Equipment } from '../../domain/Entities/Equipment/equipment.model';
   providedIn: 'root'
 })
 export class EquipmentService {
+
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/equipment`;
 
@@ -16,7 +17,10 @@ export class EquipmentService {
     return this.http.get<Equipment[]>(this.apiUrl);
   }
 
-  getAvailableEquipment(): Observable<Equipment[]> {
-    return this.http.get<Equipment[]>(`${this.apiUrl}/available`);
+  
+
+  getAvailableEquipment(startDate: string, endDate: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/available?startDate=${startDate}&endDate=${endDate}`);
   }
+  
 }

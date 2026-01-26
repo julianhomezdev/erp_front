@@ -12,7 +12,7 @@
         <p class="text-gray-600 mb-6">
           El proyecto ha sido registrado con todas sus órdenes de servicio, planes de muestreo y recursos asignados.
         </p>
-        
+
       </div>
     </div>
 
@@ -39,20 +39,23 @@
         <div class="flex-1">
           <div class="flex items-center gap-3 mb-2">
             <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+              </path>
             </svg>
             <h1 class="text-xl font-semibold text-gray-900">
               {{ contractForm.value.contractCode || 'Nuevo Proyecto' }}
             </h1>
-            <span *ngIf="isDraft" class="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded border border-amber-200">
+            <span *ngIf="isDraft"
+              class="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded border border-amber-200">
               Borrador
             </span>
           </div>
-          
+
           <p class="text-sm text-gray-600">
             Cliente: <span class="font-medium text-gray-900">{{ getClientName }}</span>
           </p>
-          
+
           <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
             <span *ngIf="lastSaved" class="flex items-center">
               <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +66,9 @@
             <span *ngIf="autoSaving" class="flex items-center text-gray-600">
               <svg class="animate-spin w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
               </svg>
               Guardando...
             </span>
@@ -81,7 +86,7 @@
               class="px-4 py-2 bg-gray-900 text-white text-sm rounded-md font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               Guardar Borrador
             </button>
-            
+
             <button *ngIf="draftId" (click)="deleteDraft()" [disabled]="loading"
               class="px-4 py-2 bg-white text-red-600 border border-red-300 text-sm rounded-md font-medium hover:bg-red-50 disabled:opacity-50 transition-colors">
               Eliminar
@@ -93,7 +98,8 @@
       <!-- Barra de progreso -->
       <div class="mt-4">
         <div class="w-full bg-gray-200 rounded-full h-1.5">
-          <div class="bg-gray-900 h-1.5 rounded-full transition-all duration-300" [style.width.%]="progressPercentage"></div>
+          <div class="bg-gray-900 h-1.5 rounded-full transition-all duration-300" [style.width.%]="progressPercentage">
+          </div>
         </div>
         <div class="flex justify-between mt-2 text-xs text-gray-600">
           <span [class.text-gray-900]="contractForm.valid" [class.font-medium]="contractForm.valid">Contrato</span>
@@ -103,7 +109,8 @@
           <span [class.text-gray-900]="hasAnyPlans" [class.font-medium]="hasAnyPlans">
             {{ totalPlansCount }} Planes
           </span>
-          <span [class.text-gray-900]="assignedCoordinators.length > 0" [class.font-medium]="assignedCoordinators.length > 0">
+          <span [class.text-gray-900]="assignedCoordinators.length > 0"
+            [class.font-medium]="assignedCoordinators.length > 0">
             {{ assignedCoordinators.length }} Coordinadores
           </span>
         </div>
@@ -115,7 +122,9 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center">
           <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clip-rule="evenodd" />
           </svg>
           <p class="text-sm text-red-800">{{ errorMessage }}</p>
         </div>
@@ -130,7 +139,9 @@
     <div *ngIf="successMessage" class="bg-emerald-50 border-l-4 border-emerald-600 p-4 mb-6 rounded-md shadow-sm">
       <div class="flex items-center">
         <svg class="h-5 w-5 text-emerald-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <path fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            clip-rule="evenodd" />
         </svg>
         <p class="text-sm text-emerald-800">{{ successMessage }}</p>
       </div>
@@ -144,7 +155,8 @@
             (currentView === ViewMode.CONTRACT ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50')">
           Contrato
         </button>
-        <button (click)="currentView = ViewMode.ODS_LIST; currentOdsIndex = -1" [disabled]="!contractForm.valid || loading"
+        <button (click)="currentView = ViewMode.ODS_LIST; currentOdsIndex = -1"
+          [disabled]="!contractForm.valid || loading"
           [class]="'flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 ' + 
             (currentView === ViewMode.ODS_LIST ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed')">
           Órdenes de Servicio ({{ serviceOrders.length }})
@@ -173,12 +185,12 @@
             <input type="text" formControlName="contractCode"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
               placeholder="Ej: CON-2026-001" />
-            <p *ngIf="contractForm.get('contractCode')?.invalid && contractForm.get('contractCode')?.touched" 
-               class="text-xs text-red-600 mt-1">
+            <p *ngIf="contractForm.get('contractCode')?.invalid && contractForm.get('contractCode')?.touched"
+              class="text-xs text-red-600 mt-1">
               Este campo es requerido
             </p>
           </div>
-          
+
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1.5">
               Nombre del Contrato
@@ -187,7 +199,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
               placeholder="Ej: Monitoreo Ambiental 2026" />
           </div>
-          
+
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1.5">
               Cliente <span class="text-red-600">*</span>
@@ -197,18 +209,18 @@
               <option value="">Seleccione un cliente</option>
               <option *ngFor="let client of clients" [value]="client.id">{{ client.name }}</option>
             </select>
-            <p *ngIf="contractForm.get('clientId')?.invalid && contractForm.get('clientId')?.touched" 
-               class="text-xs text-red-600 mt-1">
+            <p *ngIf="contractForm.get('clientId')?.invalid && contractForm.get('clientId')?.touched"
+              class="text-xs text-red-600 mt-1">
               Debe seleccionar un cliente
             </p>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Inicio</label>
             <input type="date" formControlName="startDate"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm" />
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Finalización</label>
             <input type="date" formControlName="endDate"
@@ -227,16 +239,16 @@
 
     <!-- VISTA: LISTA DE ODS -->
     <div *ngIf="currentView === ViewMode.ODS_LIST">
-      
+
       <!-- ODS existentes -->
       <div *ngIf="serviceOrders.length > 0" class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
         <h3 class="text-base font-semibold text-gray-900 mb-4">
           Órdenes de Servicio ({{ serviceOrders.length }})
         </h3>
-        
+
         <div class="space-y-3">
-          <div *ngFor="let ods of serviceOrders; let i = index" 
-               class="bg-gray-50 rounded-md p-4 border border-gray-200 hover:border-gray-300 transition-colors">
+          <div *ngFor="let ods of serviceOrders; let i = index"
+            class="bg-gray-50 rounded-md p-4 border border-gray-200 hover:border-gray-300 transition-colors">
             <div class="flex justify-between items-start">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
@@ -248,14 +260,16 @@
                 <div class="flex gap-3 items-center text-xs text-gray-600">
                   <span class="flex items-center">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
                     </svg>
                     {{ ods.samplingPlans.length }} planes
                   </span>
                   <span *ngIf="ods.startDate">{{ ods.startDate }}</span>
                 </div>
               </div>
-              
+
               <button type="button" (click)="removeServiceOrder(i)"
                 class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +277,7 @@
                 </svg>
               </button>
             </div>
-            
+
             <button (click)="selectOdsForPlans(i)" type="button"
               class="w-full mt-3 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
               Gestionar Planes de Muestreo
@@ -277,7 +291,7 @@
         <h3 class="text-base font-semibold text-gray-900 mb-4">
           Agregar Orden de Servicio
         </h3>
-        
+
         <form [formGroup]="odsForm" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -288,7 +302,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
                 placeholder="Ej: ODS-118631" />
             </div>
-            
+
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre ODS</label>
               <input type="text" formControlName="odsName"
@@ -326,8 +340,8 @@
 
         <div *ngIf="assignedCoordinators.length > 0" class="mb-4">
           <div class="flex flex-wrap gap-2">
-            <div *ngFor="let coord of assignedCoordinators; let i = index" 
-                 class="inline-flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5">
+            <div *ngFor="let coord of assignedCoordinators; let i = index"
+              class="inline-flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5">
               <span class="text-sm font-medium text-gray-900">{{ coord.coordinatorName }}</span>
               <button type="button" (click)="removeCoordinator(i)"
                 class="ml-2 text-gray-400 hover:text-red-600 transition-colors">
@@ -368,7 +382,8 @@
               <li [class.text-gray-900]="serviceOrders.length > 0" [class.font-medium]="serviceOrders.length > 0">
                 {{ serviceOrders.length > 0 ? '✓' : '○' }} Al menos 1 ODS
               </li>
-              <li [class.text-gray-900]="assignedCoordinators.length > 0" [class.font-medium]="assignedCoordinators.length > 0">
+              <li [class.text-gray-900]="assignedCoordinators.length > 0"
+                [class.font-medium]="assignedCoordinators.length > 0">
                 {{ assignedCoordinators.length > 0 ? '✓' : '○' }} Al menos 1 coordinador
               </li>
             </ul>
@@ -384,7 +399,7 @@
 
     <!-- VISTA: PLAN DE MUESTREO -->
     <div *ngIf="currentView === ViewMode.PLAN_FORM && currentOdsIndex !== -1">
-      
+
       <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
         <div class="flex justify-between items-center">
           <div>
@@ -401,15 +416,15 @@
       </div>
 
       <!-- Planes existentes -->
-      <div *ngIf="serviceOrders[currentOdsIndex].samplingPlans.length > 0" 
-           class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+      <div *ngIf="serviceOrders[currentOdsIndex].samplingPlans.length > 0"
+        class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
         <h3 class="text-base font-semibold text-gray-900 mb-4">
           Planes Configurados ({{ serviceOrders[currentOdsIndex].samplingPlans.length }})
         </h3>
-        
+
         <div class="space-y-3">
-          <div *ngFor="let plan of serviceOrders[currentOdsIndex].samplingPlans; let idx = index" 
-               class="bg-gray-50 rounded-md p-4 border border-gray-200">
+          <div *ngFor="let plan of serviceOrders[currentOdsIndex].samplingPlans; let idx = index"
+            class="bg-gray-50 rounded-md p-4 border border-gray-200">
             <div class="flex justify-between items-start">
               <div class="flex-1">
                 <span class="px-2.5 py-1 bg-gray-900 text-white text-xs font-medium rounded">
@@ -439,9 +454,9 @@
       <!-- Formulario nuevo plan -->
       <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
         <h3 class="text-base font-semibold text-gray-900 mb-6">Nuevo Plan de Muestreo</h3>
-        
+
         <form [formGroup]="planForm" class="space-y-8">
-          
+
           <!-- Información básica -->
           <div>
             <h4 class="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
@@ -456,7 +471,7 @@
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
                   placeholder="Ej: PM-001" />
               </div>
-              
+
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio</label>
                 <input type="date" formControlName="startDate"
@@ -484,16 +499,16 @@
             </div>
 
             <div class="space-y-4">
-              <div *ngFor="let siteControl of sitesArray.controls; let idx = index" 
-                   [formGroup]="$any(siteControl)" 
-                   class="bg-gray-50 p-4 rounded-md border border-gray-200">
-                
+              <div *ngFor="let siteControl of sitesArray.controls; let idx = index" [formGroup]="$any(siteControl)"
+                class="bg-gray-50 p-4 rounded-md border border-gray-200">
+
                 <div class="flex justify-between items-center mb-4">
                   <h5 class="text-sm font-medium text-gray-900">Sitio {{ idx + 1 }}</h5>
                   <button type="button" (click)="removeSite(idx)" *ngIf="sitesArray.length > 1"
                     class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                      </path>
                     </svg>
                   </button>
                 </div>
@@ -527,24 +542,27 @@
 
                   <div class="flex items-center gap-4 pt-6">
                     <label class="flex items-center cursor-pointer">
-                      <input type="checkbox" formControlName="hasReport" class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <input type="checkbox" formControlName="hasReport"
+                        class="w-4 h-4 rounded text-gray-900 border-gray-300" />
                       <span class="ml-2 text-sm text-gray-700">Informe</span>
                     </label>
 
                     <label class="flex items-center cursor-pointer">
-                      <input type="checkbox" formControlName="hasGDB" class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <input type="checkbox" formControlName="hasGDB"
+                        class="w-4 h-4 rounded text-gray-900 border-gray-300" />
                       <span class="ml-2 text-sm text-gray-700">GDB</span>
                     </label>
                   </div>
 
                   <div class="md:col-span-2">
                     <label class="flex items-center cursor-pointer mb-2">
-                      <input type="checkbox" formControlName="isSubcontracted" 
-                             class="w-4 h-4 rounded text-gray-900 border-gray-300" />
+                      <input type="checkbox" formControlName="isSubcontracted"
+                        class="w-4 h-4 rounded text-gray-900 border-gray-300" />
                       <span class="ml-2 text-sm text-gray-700">Sitio subcontratado</span>
                     </label>
 
-                    <div *ngIf="siteControl.get('isSubcontracted')?.value" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <div *ngIf="siteControl.get('isSubcontracted')?.value"
+                      class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
                       <label class="block text-sm font-medium text-gray-700 mb-1.5">
                         Proveedor <span class="text-red-600">*</span>
                       </label>
@@ -563,7 +581,7 @@
             <h4 class="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
               Recursos <span class="text-red-600">*</span>
             </h4>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio</label>
@@ -587,13 +605,25 @@
                     {{ planForm.value.selectedEmployeeIds.length }}
                   </span>
                 </h5>
+                <p *ngIf="!resourceDatesSet" class="text-xs text-amber-600 mb-2 p-2 bg-amber-50 rounded">
+                  Seleccione fechas de recursos para ver disponibilidad
+                </p>
                 <div class="max-h-48 overflow-y-auto space-y-1.5">
-                  <div *ngFor="let employee of employees" 
-                       (click)="toggleEmployeeSelection(employee.id)"
-                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
-                         (isEmployeeSelected(employee.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
-                    <p class="font-medium">{{ employee.firstName }} {{ employee.lastName }}</p>
-                    <p [class]="isEmployeeSelected(employee.id) ? 'text-gray-300' : 'text-gray-600'">{{ employee.position }}</p>
+                  <div *ngFor="let employee of availableEmployees"
+                    (click)="employee.isAvailable ? toggleEmployeeSelection(employee.id) : null" [class]="'p-2 rounded text-xs transition-colors ' + 
+           (isEmployeeSelected(employee.id) ? 'bg-gray-900 text-white' : 
+            !employee.isAvailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+            'bg-white hover:bg-gray-100 border border-gray-200 cursor-pointer')">
+                    <div class="flex justify-between items-center">
+                      <div>
+                        <p class="font-medium">{{ employee.firstName }} {{ employee.lastName }}</p>
+                        <p [class]="isEmployeeSelected(employee.id) ? 'text-gray-300' : 'text-gray-600'">{{
+                          employee.position }}</p>
+                      </div>
+                      <span *ngIf="!employee.isAvailable" class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                        No disponible
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -606,13 +636,25 @@
                     {{ planForm.value.selectedEquipmentIds.length }}
                   </span>
                 </h5>
+                <p *ngIf="!resourceDatesSet" class="text-xs text-amber-600 mb-2 p-2 bg-amber-50 rounded">
+                  Seleccione fechas de recursos para ver disponibilidad
+                </p>
                 <div class="max-h-48 overflow-y-auto space-y-1.5">
-                  <div *ngFor="let equip of equipment" 
-                       (click)="toggleEquipmentSelection(equip.id)"
-                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
-                         (isEquipmentSelected(equip.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
-                    <p class="font-medium">{{ equip.name }}</p>
-                    <p [class]="isEquipmentSelected(equip.id) ? 'text-gray-300' : 'text-gray-600'">{{ equip.code }}</p>
+                  <div *ngFor="let equip of availableEquipment"
+                    (click)="equip.isAvailable ? toggleEquipmentSelection(equip.id) : null" [class]="'p-2 rounded text-xs transition-colors ' + 
+           (isEquipmentSelected(equip.id) ? 'bg-gray-900 text-white' : 
+            !equip.isAvailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+            'bg-white hover:bg-gray-100 border border-gray-200 cursor-pointer')">
+                    <div class="flex justify-between items-center">
+                      <div>
+                        <p class="font-medium">{{ equip.name }}</p>
+                        <p [class]="isEquipmentSelected(equip.id) ? 'text-gray-300' : 'text-gray-600'">{{ equip.code }}
+                        </p>
+                      </div>
+                      <span *ngIf="!equip.isAvailable" class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                        No disponible
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -625,138 +667,157 @@
                     {{ planForm.value.selectedVehicleIds.length }}
                   </span>
                 </h5>
+                <p *ngIf="!resourceDatesSet" class="text-xs text-amber-600 mb-2 p-2 bg-amber-50 rounded">
+                  Seleccione fechas de recursos para ver disponibilidad
+                </p>
                 <div class="max-h-48 overflow-y-auto space-y-1.5">
-                  <div *ngFor="let vehicle of vehicles" 
-                       (click)="toggleVehicleSelection(vehicle.id)"
-                       [class]="'p-2 rounded cursor-pointer text-xs transition-colors ' + 
-                         (isVehicleSelected(vehicle.id) ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-100 border border-gray-200')">
-                    <p class="font-medium">{{ vehicle.plateNumber }}</p>
-                    <p [class]="isVehicleSelected(vehicle.id) ? 'text-gray-300' : 'text-gray-600'">{{ vehicle.brand }} {{ vehicle.model }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Presupuesto -->
-          <div>
-            <div class="flex justify-between items-center mb-4">
-              <h4 class="text-sm font-semibold text-gray-900 pb-2 border-b border-gray-200 flex-1">
-                Presupuesto
-              </h4>
-              <button type="button" (click)="openBudgetItemModal()"
-                class="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
-                Agregar Ítem
-              </button>
-            </div>
-
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Código CH</label>
-              <input type="text" formControlName="chCode"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
-                placeholder="Ej: CH 26 050" />
-            </div>
-
-            <!-- Ítems presupuesto -->
-            <div *ngIf="budgetItems.length > 0" class="space-y-2 mb-4">
-              <div *ngFor="let item of budgetItems; let idx = index" 
-                   class="bg-gray-50 p-3 rounded-md border border-gray-200">
-                <div class="flex justify-between items-start">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded">
-                        {{ item.category }}
-                      </span>
-                      <span class="text-sm font-medium text-gray-900">{{ item.concept }}</span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-600">
-                      <span>Cantidad: {{ item.quantity }} {{ item.unit }}</span>
-                      <span>Costo: ${{ calculateItemTotal(item).cost.toLocaleString() }}</span>
-                      <span>Facturado: ${{ calculateItemTotal(item).billed.toLocaleString() }}</span>
-                      <span [class]="calculateItemTotal(item).margin >= 0 ? 'text-emerald-600' : 'text-red-600'">
-                        Margen: {{ calculateItemTotal(item).margin.toFixed(1) }}%
+                  <div *ngFor="let vehicle of availableVehicles"
+                    (click)="vehicle.isAvailable ? toggleVehicleSelection(vehicle.id) : null" [class]="'p-2 rounded text-xs transition-colors ' + 
+           (isVehicleSelected(vehicle.id) ? 'bg-gray-900 text-white' : 
+            !vehicle.isAvailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+            'bg-white hover:bg-gray-100 border border-gray-200 cursor-pointer')">
+                    <div class="flex justify-between items-center">
+                      <div class="flex-1">
+                        <p class="font-medium">{{ vehicle.plateNumber }}</p>
+                        <p [class]="isVehicleSelected(vehicle.id) ? 'text-gray-300' : 'text-gray-600'">
+                          {{ vehicle.brand }} {{ vehicle.model }}
+                        </p>
+                        <p *ngIf="vehicle.costPerDay"
+                          [class]="isVehicleSelected(vehicle.id) ? 'text-gray-300' : 'text-emerald-600'">
+                          ${{ vehicle.costPerDay.toLocaleString() }}/día
+                        </p>
+                      </div>
+                      <span *ngIf="!vehicle.isAvailable" class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                        No disponible
                       </span>
                     </div>
                   </div>
-                  <div class="flex gap-1">
-                    <button type="button" (click)="editBudgetItem(idx)"
-                      class="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                      </svg>
-                    </button>
-                    <button type="button" (click)="removeBudgetItem(idx)"
-                      class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
-                    </button>
-                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Resumen -->
-            <div *ngIf="budgetItems.length > 0" class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
-              <h5 class="text-sm font-semibold text-gray-900 mb-3">Resumen por Categoría</h5>
-              <div class="space-y-2">
-                <div *ngFor="let category of planBudgetSummary.byCategory | keyvalue" 
-                     class="flex justify-between items-center text-xs p-2 bg-white rounded border border-gray-200">
-                  <span class="font-medium text-gray-900">{{ category.key }}</span>
-                  <div class="flex gap-3">
-                    <span class="text-gray-600">Costo: ${{ category.value.cost.toLocaleString() }}</span>
-                    <span class="text-gray-600">Facturado: ${{ category.value.billed.toLocaleString() }}</span>
-                    <span class="text-emerald-600">Utilidad: ${{ category.value.profit.toLocaleString() }}</span>
+              <!-- Presupuesto -->
+              <div>
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 pb-2 border-b border-gray-200 flex-1">
+                    Presupuesto
+                  </h4>
+                  <button type="button" (click)="openBudgetItemModal()"
+                    class="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Agregar Ítem
+                  </button>
+                </div>
+
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">Código CH</label>
+                  <input type="text" formControlName="chCode"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                    placeholder="Ej: CH 26 050" />
+                </div>
+
+                <!-- Ítems presupuesto -->
+                <div *ngIf="budgetItems.length > 0" class="space-y-2 mb-4">
+                  <div *ngFor="let item of budgetItems; let idx = index"
+                    class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                          <span class="px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded">
+                            {{ item.category }}
+                          </span>
+                          <span class="text-sm font-medium text-gray-900">{{ item.concept }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-600">
+                          <span>Cantidad: {{ item.quantity }} {{ item.unit }}</span>
+                          <span>Costo: ${{ calculateItemTotal(item).cost.toLocaleString() }}</span>
+                          <span>Facturado: ${{ calculateItemTotal(item).billed.toLocaleString() }}</span>
+                          <span [class]="calculateItemTotal(item).margin >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                            Margen: {{ calculateItemTotal(item).margin.toFixed(1) }}%
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex gap-1">
+                        <button type="button" (click)="editBudgetItem(idx)"
+                          class="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                            </path>
+                          </svg>
+                        </button>
+                        <button type="button" (click)="removeBudgetItem(idx)"
+                          class="text-gray-400 hover:text-red-600 p-1 rounded transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                <!-- Resumen -->
+                <div *ngIf="budgetItems.length > 0" class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                  <h5 class="text-sm font-semibold text-gray-900 mb-3">Resumen por Categoría</h5>
+                  <div class="space-y-2">
+                    <div *ngFor="let category of planBudgetSummary.byCategory | keyvalue"
+                      class="flex justify-between items-center text-xs p-2 bg-white rounded border border-gray-200">
+                      <span class="font-medium text-gray-900">{{ category.key }}</span>
+                      <div class="flex gap-3">
+                        <span class="text-gray-600">Costo: ${{ category.value.cost.toLocaleString() }}</span>
+                        <span class="text-gray-600">Facturado: ${{ category.value.billed.toLocaleString() }}</span>
+                        <span class="text-emerald-600">Utilidad: ${{ category.value.profit.toLocaleString() }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total -->
+                <div class="bg-gray-900 text-white p-4 rounded-md">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <p class="text-xs font-medium text-gray-300">TOTAL DEL PLAN</p>
+                      <div class="flex gap-4 mt-1 text-xs">
+                        <span>Costo: ${{ planBudgetSummary.grandTotal.cost.toLocaleString() }}</span>
+                        <span>Facturado: ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}</span>
+                        <span class="text-emerald-400">Utilidad: ${{
+                          planBudgetSummary.grandTotal.profit.toLocaleString() }}</span>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-2xl font-semibold">
+                        ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}
+                      </div>
+                      <div
+                        [class]="'text-xs font-medium ' + (planBudgetSummary.grandTotal.margin >= 0 ? 'text-emerald-400' : 'text-red-400')">
+                        Margen: {{ planBudgetSummary.grandTotal.margin.toFixed(2) }}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
+                  <textarea formControlName="notes" rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none text-sm"
+                    placeholder="Observaciones adicionales..."></textarea>
                 </div>
               </div>
-            </div>
 
-            <!-- Total -->
-            <div class="bg-gray-900 text-white p-4 rounded-md">
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="text-xs font-medium text-gray-300">TOTAL DEL PLAN</p>
-                  <div class="flex gap-4 mt-1 text-xs">
-                    <span>Costo: ${{ planBudgetSummary.grandTotal.cost.toLocaleString() }}</span>
-                    <span>Facturado: ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}</span>
-                    <span class="text-emerald-400">Utilidad: ${{ planBudgetSummary.grandTotal.profit.toLocaleString() }}</span>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-2xl font-semibold">
-                    ${{ planBudgetSummary.grandTotal.billed.toLocaleString() }}
-                  </div>
-                  <div [class]="'text-xs font-medium ' + (planBudgetSummary.grandTotal.margin >= 0 ? 'text-emerald-400' : 'text-red-400')">
-                    Margen: {{ planBudgetSummary.grandTotal.margin.toFixed(2) }}%
-                  </div>
-                </div>
+              <div class="flex justify-end pt-4 border-t border-gray-200">
+                <button type="button" (click)="addPlanToCurrentOds()" [disabled]="!planForm.valid"
+                  class="px-6 py-2.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  Agregar Plan
+                </button>
               </div>
-            </div>
-
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
-              <textarea formControlName="notes" rows="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none text-sm"
-                placeholder="Observaciones adicionales..."></textarea>
-            </div>
-          </div>
-
-          <div class="flex justify-end pt-4 border-t border-gray-200">
-            <button type="button" (click)="addPlanToCurrentOds()" [disabled]="!planForm.valid"
-              class="px-6 py-2.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              Agregar Plan
-            </button>
-          </div>
-        </form>
       </div>
     </div>
-
-  </div>
+  </form>
 </div>
 
 <!-- MODAL: PRESUPUESTO -->
-<div *ngIf="showBudgetItemModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div *ngIf="showBudgetItemModal"
+  class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
     <div class="bg-gray-900 px-6 py-4 flex justify-between items-center">
       <h3 class="text-lg font-semibold text-white">
@@ -863,13 +924,16 @@
           <div>
             <span class="text-gray-600">Utilidad:</span>
             <p class="font-semibold text-emerald-600">
-              ${{ ((budgetItemForm.value.quantity * budgetItemForm.value.billedPerUnit) - (budgetItemForm.value.quantity * budgetItemForm.value.costPerUnit)).toLocaleString() }}
+              ${{ ((budgetItemForm.value.quantity * budgetItemForm.value.billedPerUnit) - (budgetItemForm.value.quantity
+              * budgetItemForm.value.costPerUnit)).toLocaleString() }}
             </p>
           </div>
           <div>
             <span class="text-gray-600">Margen:</span>
-            <p [class]="'font-semibold ' + (((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) / budgetItemForm.value.billedPerUnit * 100) >= 0 ? 'text-emerald-600' : 'text-red-600')">
-              {{ ((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) / budgetItemForm.value.billedPerUnit * 100).toFixed(2) }}%
+            <p
+              [class]="'font-semibold ' + (((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) / budgetItemForm.value.billedPerUnit * 100) >= 0 ? 'text-emerald-600' : 'text-red-600')">
+              {{ ((budgetItemForm.value.billedPerUnit - budgetItemForm.value.costPerUnit) /
+              budgetItemForm.value.billedPerUnit * 100).toFixed(2) }}%
             </p>
           </div>
         </div>

@@ -1,28 +1,25 @@
 import { CommonModule } from "@angular/common";
 import { Component, inject, OnDestroy, OnInit } from "@angular/core";
-import { VehicleService } from "../../../../core/services/vehicle.service";
-import { forkJoin, Subject, takeUntil } from "rxjs";
 import { EmployeeService } from "../../../../core/services/employee.service";
+import { forkJoin, Subject, takeUntil } from "rxjs";
+import { Employee } from "../../../../domain/Entities/employee/employee.model";
 
 @Component({
-    
-    selector: 'logistics-dashbaord-view',
+
+    selector: 'employees-component',
     standalone: true,
     imports: [CommonModule],
-    templateUrl: './dashboard-view.component.html'
-    
+    templateUrl: 'employees-component.html'
+
+
 })
 
+export class EmployeesComponent implements OnInit, OnDestroy {
 
 
-export class LogisticsDashboard implements OnInit, OnDestroy {
-    
-    // Camionetas
-    vehiclesTotal = 0;
-    avaibleVehicles = 0;
-    
     // Personas
     employeesTotal = 0;
+    employees: Employee[] = [];
     
     
     
@@ -30,7 +27,6 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
     error : string | null = null;
     
     
-    private vehicleService = inject(VehicleService)
     private employeeService = inject(EmployeeService)
     
     
@@ -64,11 +60,9 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
         
         forkJoin({
             
-            allVehicles: this.vehicleService.getAllVehicles(),
-            
-            avaibleVehicles: this.vehicleService.getAvailableVehiclesWithOutDate(),
             
             allEmployees: this.employeeService.getAllEmployees()
+        
             
         })
         
@@ -77,12 +71,11 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
         .subscribe({
             
             next: (response) => {
-                
-                this.vehiclesTotal = response.allVehicles.length;
-                
-                this.avaibleVehicles = response.avaibleVehicles.length;
+               
                 
                 this.employeesTotal = response.allEmployees.length;
+
+                this.employees = response.allEmployees;
                 
                 this.loading = false;
                 
@@ -101,18 +94,5 @@ export class LogisticsDashboard implements OnInit, OnDestroy {
         
         
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-  
-    
-    
-    
-    
+
 }

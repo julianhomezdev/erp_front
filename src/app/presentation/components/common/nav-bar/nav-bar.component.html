@@ -88,7 +88,7 @@
       
       <!-- Recursos Humanos -->
       <li class="w-full">
-        <div routerLink="/rh" 
+        <div  
              routerLinkActive="bg-blue-400"
              [routerLinkActiveOptions]="{exact: true}"
              (click)="toggleSubmenu('rh')"
@@ -102,7 +102,7 @@
         </div>
         <ul *ngIf="openMenus['rh']" 
             class="w-full bg-blue-50 border-l-2 border-blue-400 animate-slideDown">
-          <li routerLink="/rh/employees" 
+          <li routerLink="/rh/Employees" 
               class="w-full h-9 flex cursor-pointer items-center pl-8 pr-4 transition-all duration-200 hover:bg-blue-200 text-sm">
             Empleados
           </li>
@@ -112,7 +112,7 @@
       
       <!-- Logística -->
       <li class="w-full">
-        <div routerLink="/logistics"
+        <div 
              routerLinkActive="bg-blue-400"
              [routerLinkActiveOptions]="{exact: true}"
              (click)="toggleSubmenu('logistics')"
@@ -127,12 +127,12 @@
         <ul *ngIf="openMenus['logistics']" 
             class="w-full bg-blue-50 border-l-2 border-blue-400 animate-slideDown">
           
-          <li routerLink="/logistics/shipments" 
+          <li routerLink="/logistics/vehicles" 
               class="w-full h-9 flex cursor-pointer items-center pl-8 pr-4 transition-all duration-200 hover:bg-blue-200 text-sm">
             Camionetas
           </li>
          
-          <li routerLink="/logistics/tracking" 
+          <li routerLink="/logistic/equipments" 
               class="w-full h-9 flex cursor-pointer items-center pl-8 pr-4 transition-all duration-200 hover:bg-blue-200 text-sm">
             Equipos
           </li>

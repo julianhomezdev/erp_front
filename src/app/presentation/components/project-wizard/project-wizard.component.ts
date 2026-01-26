@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { 
-  FormBuilder, 
-  FormGroup, 
-  ReactiveFormsModule, 
-  Validators, 
-  FormsModule, 
-  FormArray 
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+  FormsModule,
+  FormArray
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, Subscription } from 'rxjs';
@@ -67,7 +67,7 @@ interface BudgetItem {
   styleUrls: ['./project-wizard.component.css']
 })
 export class ProjectWizardComponent implements OnInit, OnDestroy {
-  
+
   // Inyección de servicios
   private fb = inject(FormBuilder);
   private router = inject(Router);
@@ -85,29 +85,29 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   // Enums para el template
   ViewMode = ViewMode;
   BudgetCategory = BudgetCategory;
-  
+
   // Estado de la vista
   currentView: ViewMode = ViewMode.CONTRACT;
   currentOdsIndex: number = -1;
   currentPlanIndex: number = -1;
-  
+
   // Estado del draft
   draftId: number | null = null;
   isDraft: boolean = true;
   lastSaved: Date | null = null;
   autoSaving: boolean = false;
-  
+
   // Formularios
   contractForm!: FormGroup;
   odsForm!: FormGroup;
   planForm!: FormGroup;
   coordinatorForm!: FormGroup;
   budgetItemForm!: FormGroup;
-  
+
   // Datos del proyecto
   serviceOrders: any[] = [];
   assignedCoordinators: any[] = [];
-  
+
   // Catálogos
   clients: Client[] = [];
   employees: Employee[] = [];
@@ -115,7 +115,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   vehicles: Vehicle[] = [];
   matrices: Matrix[] = [];
   coordinators: Coordinator[] = [];
-  
+
   // UI State
   loading: boolean = false;
   dataReady: boolean = false;
@@ -123,11 +123,16 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   successMessage: string = '';
   showFinalDashboard: boolean = false;
   projectResult: number | null = null;
-  
+
   // Modales
   showBudgetItemModal: boolean = false;
   editingBudgetItemIndex: number = -1;
-  
+
+  availableEmployees: any[] = [];
+  availableEquipment: any[] = [];
+  availableVehicles: any[] = [];
+  resourceDatesSet: boolean = false;
+
   // Auto-guardado
   private destroy$ = new Subject<void>();
   private autoSaveSubscription?: Subscription;
@@ -213,6 +218,139 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.planForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.formChanges$.next());
+
+    this.planForm.get('resourceStartDate')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadAvailableResources();
+        this.updateVehicleBudgetDays();
+      });
+
+    this.planForm.get('resourceEndDate')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadAvailableResources();
+        this.updateVehicleBudgetDays();
+      });
+  }
+
+  updateVehicleBudgetDays(): void {
+    const startDate = this.planForm.value.resourceStartDate;
+    const endDate = this.planForm.value.resourceEndDate;
+
+    if (!startDate || !endDate) return;
+
+    const days = this.calculateDaysBetweenDates(startDate, endDate);
+    const currentItems = [...this.budgetItems];
+
+    currentItems.forEach(item => {
+      if (item.id.startsWith('vehicle-')) {
+        item.quantity = days;
+      }
+    });
+
+    this.planForm.patchValue({ budgetItems: currentItems });
+  }
+
+
+  loadAvailableResources(): void {
+    const startDate = this.planForm.value.resourceStartDate;
+    const endDate = this.planForm.value.resourceEndDate;
+
+    if (!startDate || !endDate) {
+      this.availableEmployees = this.employees;
+      this.availableEquipment = this.equipment;
+      this.availableVehicles = this.vehicles;
+      this.resourceDatesSet = false;
+      return;
+    }
+
+    this.resourceDatesSet = true;
+    this.loading = true;
+
+    Promise.all([
+      this.employeeService.getAvailableEmployees(startDate, endDate).toPromise(),
+      this.equipmentService.getAvailableEquipment(startDate, endDate).toPromise(),
+      this.vehicleService.getAvailableVehicles(startDate, endDate).toPromise()
+    ]).then(([employees, equipment, vehicles]) => {
+      this.availableEmployees = employees || [];
+      this.availableEquipment = equipment || [];
+      this.availableVehicles = vehicles || [];
+      this.loading = false;
+    }).catch(error => {
+      console.error('Error cargando recursos disponibles:', error);
+      this.availableEmployees = this.employees;
+      this.availableEquipment = this.equipment;
+      this.availableVehicles = this.vehicles;
+      this.loading = false;
+    });
+  }
+
+  calculateDaysBetweenDates(startDate: string, endDate: string): number {
+    if (!startDate || !endDate) return 0;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
+
+  toggleVehicleSelection(vehicleId: number): void {
+    const current = this.planForm.value.selectedVehicleIds || [];
+    const index = current.indexOf(vehicleId);
+
+    if (index === -1) {
+      this.planForm.patchValue({
+        selectedVehicleIds: [...current, vehicleId]
+      });
+      this.addVehicleToBudget(vehicleId);
+    } else {
+      current.splice(index, 1);
+      this.planForm.patchValue({
+        selectedVehicleIds: [...current]
+      });
+      this.removeVehicleFromBudget(vehicleId);
+    }
+    this.formChanges$.next();
+  }
+
+  addVehicleToBudget(vehicleId: number): void {
+    const vehicle = this.availableVehicles.find(v => v.id === vehicleId);
+    const startDate = this.planForm.value.resourceStartDate;
+    const endDate = this.planForm.value.resourceEndDate;
+
+    if (!vehicle || !startDate || !endDate || !vehicle.costPerDay) {
+      return;
+    }
+
+    const days = this.calculateDaysBetweenDates(startDate, endDate);
+    const costPerDay = vehicle.costPerDay;
+
+    const vehicleBudgetItem: BudgetItem = {
+      id: `vehicle-${vehicleId}`,
+      category: BudgetCategory.TRANSPORT,
+      concept: `Vehículo ${vehicle.plateNumber} - ${vehicle.brand} ${vehicle.model}`,
+      provider: vehicle.plateNumber,
+      quantity: days,
+      unit: 'días',
+      costPerUnit: costPerDay,
+      billedPerUnit: costPerDay,
+      notes: 'Agregado automáticamente'
+    };
+
+    const currentItems = [...this.budgetItems];
+    const existingIndex = currentItems.findIndex(item => item.id === `vehicle-${vehicleId}`);
+
+    if (existingIndex === -1) {
+      currentItems.push(vehicleBudgetItem);
+      this.planForm.patchValue({ budgetItems: currentItems });
+    }
+  }
+
+  removeVehicleFromBudget(vehicleId: number): void {
+    const currentItems = [...this.budgetItems];
+    const filteredItems = currentItems.filter(item => item.id !== `vehicle-${vehicleId}`);
+    this.planForm.patchValue({ budgetItems: filteredItems });
   }
 
   /**
@@ -220,7 +358,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
    */
   loadCatalogs(): void {
     this.loading = true;
-    
+
     Promise.all([
       this.clientService.getAllClients().toPromise(),
       this.employeeService.getAllEmployees().toPromise(),
@@ -316,7 +454,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   toggleEmployeeSelection(employeeId: number): void {
     const current = this.planForm.value.selectedEmployeeIds || [];
     const index = current.indexOf(employeeId);
-    
+
     if (index === -1) {
       this.planForm.patchValue({
         selectedEmployeeIds: [...current, employeeId]
@@ -337,7 +475,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   toggleEquipmentSelection(equipmentId: number): void {
     const current = this.planForm.value.selectedEquipmentIds || [];
     const index = current.indexOf(equipmentId);
-    
+
     if (index === -1) {
       this.planForm.patchValue({
         selectedEquipmentIds: [...current, equipmentId]
@@ -355,22 +493,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     return (this.planForm.value.selectedEquipmentIds || []).includes(equipmentId);
   }
 
-  toggleVehicleSelection(vehicleId: number): void {
-    const current = this.planForm.value.selectedVehicleIds || [];
-    const index = current.indexOf(vehicleId);
-    
-    if (index === -1) {
-      this.planForm.patchValue({
-        selectedVehicleIds: [...current, vehicleId]
-      });
-    } else {
-      current.splice(index, 1);
-      this.planForm.patchValue({
-        selectedVehicleIds: [...current]
-      });
-    }
-    this.formChanges$.next();
-  }
+
 
   isVehicleSelected(vehicleId: number): boolean {
     return (this.planForm.value.selectedVehicleIds || []).includes(vehicleId);
@@ -416,7 +539,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     };
 
     const currentItems = [...this.budgetItems];
-    
+
     if (this.editingBudgetItemIndex === -1) {
       currentItems.push(budgetItem);
     } else {
@@ -446,7 +569,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     const billed = item.quantity * item.billedPerUnit;
     const profit = billed - cost;
     const margin = billed > 0 ? (profit / billed) * 100 : 0;
-    
+
     return { cost, billed, profit, margin };
   }
 
@@ -458,7 +581,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     this.budgetItems.forEach(item => {
       const totals = this.calculateItemTotal(item);
-      
+
       if (!summary.byCategory.has(item.category)) {
         summary.byCategory.set(item.category, {
           cost: 0,
@@ -560,13 +683,13 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       };
     });
 
-    const selectedEmployees = this.employees.filter(e => 
+    const selectedEmployees = this.employees.filter(e =>
       this.planForm.value.selectedEmployeeIds.includes(e.id)
     );
-    const selectedEquipment = this.equipment.filter(e => 
+    const selectedEquipment = this.equipment.filter(e =>
       this.planForm.value.selectedEquipmentIds.includes(e.id)
     );
-    const selectedVehicles = this.vehicles.filter(v => 
+    const selectedVehicles = this.vehicles.filter(v =>
       this.planForm.value.selectedVehicleIds.includes(v.id)
     );
 
@@ -631,7 +754,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     const coordinatorId = this.coordinatorForm.value.coordinatorId;
     const coordinator = this.coordinators.find(c => c.id === Number(coordinatorId));
-    
+
     if (coordinator) {
       const alreadyAdded = this.assignedCoordinators.some(c => c.coordinatorId === Number(coordinatorId));
       if (alreadyAdded) {
@@ -656,67 +779,67 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
 
   saveDraft(isAutoSave: boolean = false): void {
-  if (!this.contractForm.valid) {
-    if (!isAutoSave) {
-      this.errorMessage = 'Complete al menos el código del contrato y el cliente';
-    }
-    return;
-  }
-
-  const draftData = {
-  Id: this.draftId,
-  Status: 'draft',
-  Contract: {
-    ContractCode: this.contractForm.value.contractCode,
-    ContractName: this.contractForm.value.contractName || '',
-    ClientId: Number(this.contractForm.value.clientId),
-    ClientName: null,
-    StartDate: this.contractForm.value.startDate || null,
-    EndDate: this.contractForm.value.endDate || null
-  },
-  ServiceOrders: this.serviceOrders || [],
-  Coordinators: this.assignedCoordinators || []
-};
-
-  console.log('DATOS A ENVIAR:', JSON.stringify(draftData, null, 2));
-  
-  if (isAutoSave) {
-    this.autoSaving = true;
-  } else {
-    this.loading = true;
-  }
-
-  this.draftService.saveDraft(draftData).subscribe({
-    next: (result) => {
-      console.log('RESPUESTA:', result);
-      if (!this.draftId) {
-        this.draftId = result.id || result.Id;
-      }
-      this.lastSaved = new Date();
-      
+    if (!this.contractForm.valid) {
       if (!isAutoSave) {
-        this.successMessage = 'Borrador guardado exitosamente';
-        setTimeout(() => this.successMessage = '', 3000);
+        this.errorMessage = 'Complete al menos el código del contrato y el cliente';
       }
-      
-      this.loading = false;
-      this.autoSaving = false;
-    },
-    error: (error) => {
-      console.error('ERROR COMPLETO:', error);
-      console.error('ERROR MESSAGE:', error.error);
-      console.error('ERRORES DE VALIDACIÓN:', error.error?.errors); // AGREGA ESTA LÍNEA
-      if (!isAutoSave) {
-        this.errorMessage = 'Error al guardar el borrador';
-      }
-      this.loading = false;
-      this.autoSaving = false;
+      return;
     }
-  });
-}
+
+    const draftData = {
+      Id: this.draftId,
+      Status: 'draft',
+      Contract: {
+        ContractCode: this.contractForm.value.contractCode,
+        ContractName: this.contractForm.value.contractName || '',
+        ClientId: Number(this.contractForm.value.clientId),
+        ClientName: null,
+        StartDate: this.contractForm.value.startDate || null,
+        EndDate: this.contractForm.value.endDate || null
+      },
+      ServiceOrders: this.serviceOrders || [],
+      Coordinators: this.assignedCoordinators || []
+    };
+
+    console.log('DATOS A ENVIAR:', JSON.stringify(draftData, null, 2));
+
+    if (isAutoSave) {
+      this.autoSaving = true;
+    } else {
+      this.loading = true;
+    }
+
+    this.draftService.saveDraft(draftData).subscribe({
+      next: (result) => {
+        console.log('RESPUESTA:', result);
+        if (!this.draftId) {
+          this.draftId = result.id || result.Id;
+        }
+        this.lastSaved = new Date();
+
+        if (!isAutoSave) {
+          this.successMessage = 'Borrador guardado exitosamente';
+          setTimeout(() => this.successMessage = '', 3000);
+        }
+
+        this.loading = false;
+        this.autoSaving = false;
+      },
+      error: (error) => {
+        console.error('ERROR COMPLETO:', error);
+        console.error('ERROR MESSAGE:', error.error);
+        console.error('ERRORES DE VALIDACIÓN:', error.error?.errors); // AGREGA ESTA LÍNEA
+        if (!isAutoSave) {
+          this.errorMessage = 'Error al guardar el borrador';
+        }
+        this.loading = false;
+        this.autoSaving = false;
+      }
+    });
+  }
   loadDraft(draftId: number): void {
     this.loading = true;
-    
+
     this.draftService.getDraftById(draftId).subscribe({
       next: (draft) => {
         this.draftId = draftId;
@@ -754,13 +877,13 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     });
   }
 
- 
+
 
   private restoreDraftData(draft: any): void {
     const contract = draft.contract || draft.Contract;
     const serviceOrders = draft.serviceOrders || draft.ServiceOrders;
     const coordinators = draft.coordinators || draft.Coordinators;
-    
+
     if (contract) {
       this.contractForm.patchValue({
         contractCode: contract.contractCode || contract.ContractCode,
@@ -781,8 +904,8 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
   canFinalize(): boolean {
     return this.contractForm.valid &&
-           this.serviceOrders.length > 0 &&
-           this.assignedCoordinators.length > 0;
+      this.serviceOrders.length > 0 &&
+      this.assignedCoordinators.length > 0;
   }
 
   finalizeProject(): void {
@@ -803,7 +926,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.projectCreationService.createCompleteProject(projectDto).subscribe({
       next: (result) => {
         this.projectResult = result;
-        
+
         // Eliminar el draft si existe
         if (this.draftId) {
           this.draftService.deleteDraft(this.draftId).subscribe();
@@ -820,105 +943,105 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       }
     });
   }
-  
+
   private calculatePlanBudgetTotals(budgetItems: BudgetItem[]) {
-  const totals = {
-    CHCode: this.planForm.value.chCode || null,
-    TransportCostChemilab: 0,
-    TransportBilledToClient: 0,
-    LogisticsCostChemilab: 0,
-    LogisticsBilledToClient: 0,
-    SubcontractingCostChemilab: 0,
-    SubcontractingBilledToClient: 0,
-    FluvialTransportCostChemilab: 0,
-    FluvialTransportBilledToClient: 0,
-    ReportsCostChemilab: 0,
-    ReportsBilledToClient: 0,
-    Notes: this.planForm.value.notes || null
-  };
+    const totals = {
+      CHCode: this.planForm.value.chCode || null,
+      TransportCostChemilab: 0,
+      TransportBilledToClient: 0,
+      LogisticsCostChemilab: 0,
+      LogisticsBilledToClient: 0,
+      SubcontractingCostChemilab: 0,
+      SubcontractingBilledToClient: 0,
+      FluvialTransportCostChemilab: 0,
+      FluvialTransportBilledToClient: 0,
+      ReportsCostChemilab: 0,
+      ReportsBilledToClient: 0,
+      Notes: this.planForm.value.notes || null
+    };
 
-  budgetItems.forEach(item => {
-    const itemTotals = this.calculateItemTotal(item);
-    
-    switch(item.category) {
-      case BudgetCategory.TRANSPORT:
-        totals.TransportCostChemilab += itemTotals.cost;
-        totals.TransportBilledToClient += itemTotals.billed;
-        break;
-      case BudgetCategory.LOGISTICS:
-        totals.LogisticsCostChemilab += itemTotals.cost;
-        totals.LogisticsBilledToClient += itemTotals.billed;
-        break;
-      case BudgetCategory.SUBCONTRACTING:
-        totals.SubcontractingCostChemilab += itemTotals.cost;
-        totals.SubcontractingBilledToClient += itemTotals.billed;
-        break;
-      case BudgetCategory.RIVER_TRANSPORT:
-        totals.FluvialTransportCostChemilab += itemTotals.cost;
-        totals.FluvialTransportBilledToClient += itemTotals.billed;
-        break;
-      case BudgetCategory.REPORTS:
-        totals.ReportsCostChemilab += itemTotals.cost;
-        totals.ReportsBilledToClient += itemTotals.billed;
-        break;
-    }
-  });
+    budgetItems.forEach(item => {
+      const itemTotals = this.calculateItemTotal(item);
 
-  return totals;
-}
-  
+      switch (item.category) {
+        case BudgetCategory.TRANSPORT:
+          totals.TransportCostChemilab += itemTotals.cost;
+          totals.TransportBilledToClient += itemTotals.billed;
+          break;
+        case BudgetCategory.LOGISTICS:
+          totals.LogisticsCostChemilab += itemTotals.cost;
+          totals.LogisticsBilledToClient += itemTotals.billed;
+          break;
+        case BudgetCategory.SUBCONTRACTING:
+          totals.SubcontractingCostChemilab += itemTotals.cost;
+          totals.SubcontractingBilledToClient += itemTotals.billed;
+          break;
+        case BudgetCategory.RIVER_TRANSPORT:
+          totals.FluvialTransportCostChemilab += itemTotals.cost;
+          totals.FluvialTransportBilledToClient += itemTotals.billed;
+          break;
+        case BudgetCategory.REPORTS:
+          totals.ReportsCostChemilab += itemTotals.cost;
+          totals.ReportsBilledToClient += itemTotals.billed;
+          break;
+      }
+    });
+
+    return totals;
+  }
+
 
   private buildProjectDto(): CreateProject {
-  const contractData = this.contractForm.value;
+    const contractData = this.contractForm.value;
 
-  const serviceOrders = this.serviceOrders.map(ods => ({
-    OdsCode: ods.odsCode,
-    OdsName: ods.odsName,
-    StartDate: ods.startDate || null,
-    EndDate: ods.endDate || null,
-    SamplingPlans: ods.samplingPlans.map((plan: any) => ({
-      PlanCode: plan.planCode,
-      StartDate: plan.startDate || null,
-      EndDate: plan.endDate || null,
-      Sites: plan.sites.map((site: any) => ({
-        Name: site.name,
-        MatrixId: site.matrixId,
-        ExecutionDate: site.executionDate || null,
-        HasReport: site.hasReport,
-        HasGDB: site.hasGDB
-      })),
-      Resources: {
-        StartDate: plan.resources.startDate || null,
-        EndDate: plan.resources.endDate || null,
-        EmployeeIds: plan.resources.employeeIds,
-        EquipmentIds: plan.resources.equipmentIds,
-        VehicleIds: plan.resources.vehicleIds
+    const serviceOrders = this.serviceOrders.map(ods => ({
+      OdsCode: ods.odsCode,
+      OdsName: ods.odsName,
+      StartDate: ods.startDate || null,
+      EndDate: ods.endDate || null,
+      SamplingPlans: ods.samplingPlans.map((plan: any) => ({
+        PlanCode: plan.planCode,
+        StartDate: plan.startDate || null,
+        EndDate: plan.endDate || null,
+        Sites: plan.sites.map((site: any) => ({
+          Name: site.name,
+          MatrixId: site.matrixId,
+          ExecutionDate: site.executionDate || null,
+          HasReport: site.hasReport,
+          HasGDB: site.hasGDB
+        })),
+        Resources: {
+          StartDate: plan.resources.startDate || null,
+          EndDate: plan.resources.endDate || null,
+          EmployeeIds: plan.resources.employeeIds,
+          EquipmentIds: plan.resources.equipmentIds,
+          VehicleIds: plan.resources.vehicleIds
+        },
+        Budget: this.calculatePlanBudgetTotals(plan.budget.items || [])
+      }))
+    }));
+
+
+
+
+
+    return {
+      Contract: {
+        ContractCode: contractData.contractCode,
+        ContractName: contractData.contractName || '',
+        ClientId: Number(contractData.clientId),
+        StartDate: contractData.startDate || null,
+        EndDate: contractData.endDate || null
       },
-      Budget: this.calculatePlanBudgetTotals(plan.budget.items || [])
-    }))
-  }));
-
-  
-  
-  
-  
-  return {
-    Contract: {
-      ContractCode: contractData.contractCode,
-      ContractName: contractData.contractName || '',
-      ClientId: Number(contractData.clientId),
-      StartDate: contractData.startDate || null,
-      EndDate: contractData.endDate || null
-    },
-    ServiceOrders: serviceOrders,
-    CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
-    ProjectDetails: {
-      ProjectName: contractData.contractName || contractData.contractCode,
-      ProjectDescription: '',
-      Priority: 'media'
-    }
-  };
-}
+      ServiceOrders: serviceOrders,
+      CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
+      ProjectDetails: {
+        ProjectName: contractData.contractName || contractData.contractCode,
+        ProjectDescription: '',
+        Priority: 'media'
+      }
+    };
+  }
 
   createAnotherProject(): void {
     this.router.navigate(['/projects/new']);
@@ -941,9 +1064,9 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
   getTimeSinceLastSave(): string {
     if (!this.lastSaved) return 'Nunca';
-    
+
     const seconds = Math.floor((new Date().getTime() - this.lastSaved.getTime()) / 1000);
-    
+
     if (seconds < 60) return 'hace unos segundos';
     if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} min`;
     return `hace ${Math.floor(seconds / 3600)} horas`;
