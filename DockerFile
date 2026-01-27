@@ -3,7 +3,7 @@ FROM stefanscherer/node-windows:latest
 
 WORKDIR /app
 COPY package.json .
-RUN npm install
+RUN npm config set strict-ssl false
 COPY . .
 EXPOSE 4200 
 CMD npm run start
