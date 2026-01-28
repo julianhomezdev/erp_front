@@ -16,5 +16,4 @@ COPY . .
 
 EXPOSE 4200 
 
-# Inicia con ng serve permitiendo acceso externo
-CMD ["ng,cmd", "serve", "--host", "0.0.0.0", "--port", "4200", "--disable-host-check"]
+CMD ["cmd", "/c", "ng serve --host 0.0.0.0 --port 4200 --disable-host-check"]
