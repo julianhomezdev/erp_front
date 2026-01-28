@@ -7,7 +7,7 @@ import { SamplingPlanComponent } from "../../components/sampling-plan/sampling-p
         
     selector: 'sampling-plan-page',
     standalone: true,
-    imports: [CommonModule,RouterLink, RouterOutlet, SamplingPlanComponent],
+    imports: [CommonModule,SamplingPlanComponent],
     templateUrl: './sampling-plan.component.html',
         
 })

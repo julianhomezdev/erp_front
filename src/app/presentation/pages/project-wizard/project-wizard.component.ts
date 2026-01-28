@@ -7,7 +7,7 @@ import { ProjectWizardComponent } from "../../components/project-wizard/project-
         
     selector: 'wizard-page',
     standalone: true,
-    imports: [CommonModule,  RouterLink, RouterOutlet, ProjectWizardComponent],
+    imports: [CommonModule, ProjectWizardComponent],
     templateUrl: './project-wizard.component.html',
         
 })
