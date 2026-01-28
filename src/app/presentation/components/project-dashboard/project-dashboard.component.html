@@ -5,14 +5,16 @@
     <div class="p-6 border-b border-gray-200">
         <div class="flex items-start justify-between mb-3">
             <div class="flex-1">
-                <h3 class="text-base font-semibold text-gray-900 group-hover:text-gray-700 transition-colors line-clamp-1">
+                <h3
+                    class="text-base font-semibold text-gray-900 group-hover:text-gray-700 transition-colors line-clamp-1">
                     {{ project.projectName || 'Sin nombre' }}
                 </h3>
                 <p class="text-sm text-gray-500 mt-1">
                     {{ project.contract?.contractCode }}
                 </p>
             </div>
-            <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium bg-emerald-600 text-white rounded">
+            <span
+                class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium bg-emerald-600 text-white rounded">
                 Activo
             </span>
         </div>
@@ -37,12 +39,14 @@
 
             <div class="flex items-center gap-4 mt-3">
                 <div class="flex items-center text-sm">
-                    <span class="inline-flex items-center px-3 py-1 rounded bg-slate-100 text-slate-700 font-medium text-xs">
+                    <span
+                        class="inline-flex items-center px-3 py-1 rounded bg-slate-100 text-slate-700 font-medium text-xs">
                         {{ project.totalServiceOrders }} ODS
                     </span>
                 </div>
                 <div class="flex items-center text-sm">
-                    <span class="inline-flex items-center px-3 py-1 rounded bg-slate-100 text-slate-700 font-medium text-xs">
+                    <span
+                        class="inline-flex items-center px-3 py-1 rounded bg-slate-100 text-slate-700 font-medium text-xs">
                         {{ project.totalSamplingPlans }} Planes
                     </span>
                 </div>
@@ -94,12 +98,11 @@
 </div>
 
 <!-- Modal de Detalles del Proyecto -->
-<div *ngIf="selectedProject" 
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
-     (click)="closeModal()">
+<div *ngIf="selectedProject" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
+    (click)="closeModal()">
 
-    <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-lg border border-gray-300" 
-         (click)="$event.stopPropagation()">
+    <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-lg border border-gray-300"
+        (click)="$event.stopPropagation()">
 
         <!-- Header -->
         <div class="bg-slate-50 px-8 py-6 border-b border-gray-300">
@@ -112,10 +115,11 @@
                         {{ selectedProject.contract?.contractCode }} · {{ selectedProject.contract?.contractName }}
                     </p>
                 </div>
-                <button (click)="closeModal()" 
-                        class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-200 rounded-lg">
+                <button (click)="closeModal()"
+                    class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-200 rounded-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
                     </svg>
                 </button>
             </div>
@@ -133,7 +137,8 @@
                     </div>
                     <div class="bg-white rounded-lg p-4 border border-gray-300 shadow-sm">
                         <p class="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Coordinador</p>
-                        <p class="text-gray-900 font-semibold">{{ selectedProject.coordinator?.name || 'Sin asignar' }}</p>
+                        <p class="text-gray-900 font-semibold">{{ selectedProject.coordinator?.name || 'Sin asignar' }}
+                        </p>
                     </div>
                     <div class="bg-white rounded-lg p-4 border border-gray-300 shadow-sm">
                         <p class="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Fecha Inicio</p>
@@ -151,10 +156,10 @@
                         <span class="w-1 h-5 bg-slate-700 rounded mr-3"></span>
                         Órdenes de Servicio
                     </h3>
-                    
+
                     <div class="space-y-4">
                         <div *ngFor="let order of selectedProject.serviceOrders"
-                             class="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+                            class="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
 
                             <!-- ODS Header -->
                             <div class="bg-slate-700 text-white px-6 py-4">
@@ -173,7 +178,7 @@
                             <!-- Planes de Muestreo -->
                             <div *ngIf="order.samplingPlans?.length > 0" class="p-6 space-y-6">
                                 <div *ngFor="let plan of order.samplingPlans">
-                                    
+
                                     <!-- Plan Header -->
                                     <div class="border-l-4 border-slate-600 pl-4 mb-4">
                                         <p class="font-semibold text-gray-900">{{ plan.planCode }}</p>
@@ -182,46 +187,54 @@
 
                                     <!-- Plan Content Grid -->
                                     <div class="grid grid-cols-2 gap-6">
-                                        
+
                                         <!-- Columna Izquierda: Sitios y Recursos -->
                                         <div class="space-y-4">
-                                            
+
                                             <!-- Sitios -->
-                                            <div *ngIf="plan.sites?.length > 0" 
-                                                 class="bg-gray-50 rounded-lg p-4 border border-gray-300">
-                                                <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                                            <div *ngIf="plan.sites?.length > 0"
+                                                class="bg-gray-50 rounded-lg p-4 border border-gray-300">
+                                                <p
+                                                    class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
                                                     Sitios de Monitoreo
                                                 </p>
                                                 <div class="space-y-2">
-                                                    <div *ngFor="let site of plan.sites" 
-                                                         class="flex items-start text-sm">
-                                                        <span class="w-1.5 h-1.5 bg-slate-600 rounded-full mt-1.5 mr-2 shrink-0"></span>
+                                                    <div *ngFor="let site of plan.sites"
+                                                        class="flex items-start text-sm">
+                                                        <span
+                                                            class="w-1.5 h-1.5 bg-slate-600 rounded-full mt-1.5 mr-2 shrink-0"></span>
                                                         <div>
                                                             <p class="font-medium text-gray-900">{{ site.name }}</p>
-                                                            <p class="text-gray-600 text-xs">{{ site.matrixName }} · {{ site.executionDate }}</p>
+                                                            <p class="text-gray-600 text-xs">{{ site.matrixName }} · {{
+                                                                site.executionDate }}</p>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <!-- Recursos -->
-                                            <div *ngIf="plan.resources" 
-                                                 class="bg-gray-50 rounded-lg p-4 border border-gray-300">
-                                                <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                                            <div *ngIf="plan.resources"
+                                                class="bg-gray-50 rounded-lg p-4 border border-gray-300">
+                                                <p
+                                                    class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
                                                     Recursos Asignados
                                                 </p>
                                                 <div class="space-y-3">
                                                     <div *ngIf="plan.resources.employees?.length > 0">
                                                         <p class="text-xs font-semibold text-gray-600 mb-1">Personal</p>
-                                                        <p class="text-sm text-gray-900">{{ getEmployeeNames(plan.resources.employees) }}</p>
+                                                        <p class="text-sm text-gray-900">{{
+                                                            getEmployeeNames(plan.resources.employees) }}</p>
                                                     </div>
                                                     <div *ngIf="plan.resources.equipment?.length > 0">
                                                         <p class="text-xs font-semibold text-gray-600 mb-1">Equipos</p>
-                                                        <p class="text-sm text-gray-900">{{ getEquipmentNames(plan.resources.equipment) }}</p>
+                                                        <p class="text-sm text-gray-900">{{
+                                                            getEquipmentNames(plan.resources.equipment) }}</p>
                                                     </div>
                                                     <div *ngIf="plan.resources.vehicles?.length > 0">
-                                                        <p class="text-xs font-semibold text-gray-600 mb-1">Vehículos</p>
-                                                        <p class="text-sm text-gray-900">{{ getVehiclePlates(plan.resources.vehicles) }}</p>
+                                                        <p class="text-xs font-semibold text-gray-600 mb-1">Vehículos
+                                                        </p>
+                                                        <p class="text-sm text-gray-900">{{
+                                                            getVehiclePlates(plan.resources.vehicles) }}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -229,60 +242,80 @@
                                         </div>
 
                                         <!-- Columna Derecha: Presupuesto -->
+                                        <!-- Columna Derecha: Presupuesto -->
                                         <div *ngIf="plan.budget">
                                             <div class="bg-gray-50 rounded-lg p-4 border border-gray-300 h-full">
-                                                <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-4">
+                                                <p
+                                                    class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-4">
                                                     Análisis Financiero
                                                 </p>
-                                                
+
                                                 <!-- Resumen -->
                                                 <div class="space-y-3 mb-4">
-                                                    <div class="flex justify-between items-baseline pb-2 border-b border-gray-300">
+                                                    <div
+                                                        class="flex justify-between items-baseline pb-2 border-b border-gray-300">
                                                         <span class="text-xs text-gray-600">Costo Total</span>
                                                         <span class="text-lg font-semibold text-gray-900">
                                                             ${{ plan.budget.totalCost | number:'1.2-2' }}
                                                         </span>
                                                     </div>
-                                                    <div class="flex justify-between items-baseline pb-2 border-b border-gray-300">
+                                                    <div
+                                                        class="flex justify-between items-baseline pb-2 border-b border-gray-300">
                                                         <span class="text-xs text-gray-600">Total Facturado</span>
                                                         <span class="text-lg font-semibold text-gray-900">
                                                             ${{ plan.budget.totalBilled | number:'1.2-2' }}
                                                         </span>
                                                     </div>
-                                                    <div class="flex justify-between items-baseline pt-2">
-                                                        <span class="text-xs font-semibold text-gray-700">Utilidad</span>
+                                                    <div
+                                                        class="flex justify-between items-baseline pb-2 border-b border-gray-300">
+                                                        <span
+                                                            class="text-xs font-semibold text-gray-700">Utilidad</span>
                                                         <span class="text-xl font-semibold text-emerald-600">
                                                             ${{ plan.budget.totalProfit | number:'1.2-2' }}
+                                                        </span>
+                                                    </div>
+
+                                                    <!-- NUEVO: Margen -->
+                                                    <div class="flex justify-between items-baseline pt-2">
+                                                        <span class="text-xs font-semibold text-gray-700">Margen</span>
+                                                        <span
+                                                            [class]="'text-lg font-semibold ' + (calculateMargin(plan.budget) >= 0 ? 'text-emerald-600' : 'text-red-600')">
+                                                            {{ calculateMargin(plan.budget).toFixed(2) }}%
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <!-- Desglose -->
                                                 <div class="mt-4 pt-4 border-t border-gray-300">
-                                                    <p class="text-xs font-semibold text-gray-600 mb-3">Desglose de Costos</p>
+                                                    <p class="text-xs font-semibold text-gray-600 mb-3">Desglose de
+                                                        Costos</p>
                                                     <div class="space-y-2 text-xs">
                                                         <div class="flex justify-between">
                                                             <span class="text-gray-600">Transporte</span>
                                                             <span class="font-medium text-gray-900">
-                                                                ${{ plan.budget.transportCostChemilab | number:'1.2-2' }}
+                                                                ${{ plan.budget.transportCostChemilab | number:'1.2-2'
+                                                                }}
                                                             </span>
                                                         </div>
                                                         <div class="flex justify-between">
                                                             <span class="text-gray-600">Logística</span>
                                                             <span class="font-medium text-gray-900">
-                                                                ${{ plan.budget.logisticsCostChemilab | number:'1.2-2' }}
+                                                                ${{ plan.budget.logisticsCostChemilab | number:'1.2-2'
+                                                                }}
                                                             </span>
                                                         </div>
                                                         <div class="flex justify-between">
                                                             <span class="text-gray-600">Subcontratación</span>
                                                             <span class="font-medium text-gray-900">
-                                                                ${{ plan.budget.subcontractingCostChemilab | number:'1.2-2' }}
+                                                                ${{ plan.budget.subcontractingCostChemilab |
+                                                                number:'1.2-2' }}
                                                             </span>
                                                         </div>
                                                         <div class="flex justify-between">
                                                             <span class="text-gray-600">Transporte Fluvial</span>
                                                             <span class="font-medium text-gray-900">
-                                                                ${{ plan.budget.fluvialTransportCostChemilab | number:'1.2-2' }}
+                                                                ${{ plan.budget.fluvialTransportCostChemilab |
+                                                                number:'1.2-2' }}
                                                             </span>
                                                         </div>
                                                         <div class="flex justify-between">
@@ -295,7 +328,8 @@
                                                 </div>
 
                                                 <!-- Notas -->
-                                                <div *ngIf="plan.budget.notes" class="mt-4 pt-4 border-t border-gray-300">
+                                                <div *ngIf="plan.budget.notes"
+                                                    class="mt-4 pt-4 border-t border-gray-300">
                                                     <p class="text-xs font-semibold text-gray-600 mb-2">Notas</p>
                                                     <p class="text-xs text-gray-700 italic">{{ plan.budget.notes }}</p>
                                                 </div>
@@ -317,7 +351,7 @@
 
                 <!-- Mensaje si no hay órdenes -->
                 <div *ngIf="!selectedProject.serviceOrders || selectedProject.serviceOrders.length === 0"
-                     class="bg-white rounded-lg border border-gray-300 p-8 text-center">
+                    class="bg-white rounded-lg border border-gray-300 p-8 text-center">
                     <p class="text-gray-600">No hay órdenes de servicio registradas para este proyecto.</p>
                 </div>
 
@@ -326,8 +360,8 @@
 
         <!-- Footer -->
         <div class="bg-white border-t border-gray-300 px-8 py-4">
-            <button (click)="closeModal()" 
-                    class="px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors shadow-sm">
+            <button (click)="closeModal()"
+                class="px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors shadow-sm">
                 Cerrar
             </button>
         </div>

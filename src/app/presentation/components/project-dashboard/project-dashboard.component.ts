@@ -36,6 +36,20 @@ export class ProjectDashboardComponent implements OnInit {
     });
   }
   
+  
+  calculateMargin(budget: any) : number {
+    
+    if (!budget || !budget.totalBilled || budget.totalBilled === 0) {
+      return 0;
+  }
+  
+    const totalProfit = budget.totalProfit || 0;
+    const totalBilled = budget.totalBilled;
+    
+    return (totalProfit / totalBilled) * 100;
+    
+  }
+  
   viewProject(projectId: number): void {
     this.projectService.getProjectById(projectId).subscribe({
       next: (data) => {
