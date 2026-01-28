@@ -1,79 +1,161 @@
 <div class="w-full h-screen flex flex-col items-center pt-5 gap-5">
 
-
     <!--Employees SECTION-->
-    <div class="w-11/12 h-auto bg-white shadow-xl p-8 rounded-3xl border border-gray-200 cursor-pointer">
+    <div class="w-11/12 h-auto bg-white shadow-sm p-8 rounded-lg border border-gray-300">
 
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">Personal</h1>
+        <h1 class="text-2xl font-semibold text-gray-900 mb-6">Personal</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
             <!-- Total empleados -->
-            <div class="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-l-4 border-blue-500">
-                <p class="text-sm text-gray-600 font-medium mb-2">Total personas</p>
-                <p class="text-4xl font-bold text-gray-800">{{ employeesTotal }}</p>
+            <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-600 cursor-pointer">
+                <p class="text-xs text-gray-600 font-medium mb-2 uppercase tracking-wide">Total personas</p>
+                <p class="text-3xl font-semibold text-gray-900">{{ employeesTotal }}</p>
+            </div>
+
+            <!-- Personas Filtradas -->
+            <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-600">
+                <p class="text-xs text-gray-600 font-medium mb-2 uppercase tracking-wide">Personas mostradas</p>
+                <p class="text-3xl font-semibold text-gray-900">{{ filteredEmployees.length }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ selectedFilter }}</p>
             </div>
 
             <button
                 class="mt-4 self-end inline-flex items-center gap-2
-                    px-4 py-2 text-sm font-semibold bg-blue-100
-                    text-black  border-l-8 border-blue-500 rounded-full cursor-pointer
-                    "
+                    px-5 py-2.5 text-sm font-medium bg-slate-700
+                    text-white rounded-lg cursor-pointer
+                    hover:bg-slate-800 transition-colors"
             >
-                + Agregar persona
+                Agregar persona
             </button>
 
         </div>
 
     </div>
 
-    <div class="w-11/12 h-auto bg-white  p-8 rounded-3xl border border-gray-200 flex justify-center">
-
-        <div class="w-full  h-auto grid grid-cols-4 gap-4 cursor-pointer">
-
-
-            @for (item of employees; track $index) {
-
-
-            <div
-                class="h-60 rounded-3xl p-4 cursor-pointer"
+    <!-- Sección de Filtros -->
+    <div class="w-11/12 h-auto bg-white shadow-sm p-6 rounded-lg border border-gray-300">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Filtrar por base</h2>
+        
+        <div class="flex flex-wrap gap-2">
+            
+            <!-- Botón TODOS -->
+            <button
+                (click)="filterByCategory('TODOS')"
                 [ngClass]="{
-                    'bg-green-100': item.isAvailable,
-                    'bg-red-100': !item.isAvailable
+                    'bg-slate-700 text-white': selectedFilter === 'TODOS',
+                    'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== 'TODOS'
                 }"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                    flex items-center gap-2 border border-gray-300"
             >
+                <span>TODOS</span>
+                <span 
+                    [ngClass]="{
+                        'bg-white text-slate-700': selectedFilter === 'TODOS',
+                        'bg-slate-700 text-white': selectedFilter !== 'TODOS'
+                    }"
+                    class="px-2 py-0.5 rounded text-xs font-semibold">
+                    {{ getCategoryCount('TODOS') }}
+                </span>
+            </button>
 
-                <h3 class="text-m font-semibold text-gray-800 tracking-wide">{{item.firstName}} {{item.lastName}}</h3>
+            <!-- Botones de categorías (bases) -->
+            @for (category of availableCategories; track category) {
+                <button
+                    (click)="filterByCategory(category)"
+                    [ngClass]="{
+                        'bg-slate-700 text-white': selectedFilter === category,
+                        'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== category
+                    }"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                        flex items-center gap-2 border border-gray-300"
+                >
+                    <span>{{ category }}</span>
+                    <span 
+                        [ngClass]="{
+                            'bg-white text-slate-700': selectedFilter === category,
+                            'bg-slate-700 text-white': selectedFilter !== category
+                        }"
+                        class="px-2 py-0.5 rounded text-xs font-semibold"
+                    >
+                        {{ getCategoryCount(category) }}
+                    </span>
+                </button>
+            }
+        </div>
+    </div>
 
-                @if (item.isAvailable === true) {
+    <!-- Grid de Empleados -->
+    <div class="w-11/12 h-auto bg-white shadow-sm p-8 rounded-lg border border-gray-300 flex justify-center">
 
+        @if (loading) {
+            <div class="flex items-center justify-center py-12">
+                <p class="text-gray-600 text-base">Cargando personal...</p>
+            </div>
+        }
+        
+        @else if (error) {
+            <div class="flex items-center justify-center py-12">
+                <p class="text-red-700 text-base">{{ error }}</p>
+            </div>
+        }
+        
+        @else if (filteredEmployees.length === 0) {
+            <div class="flex items-center justify-center py-12">
+                <p class="text-gray-600 text-base">No hay personas para mostrar</p>
+            </div>
+        }
+        
+        @else {
+            <div class="w-full h-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 
-                <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium
-                        rounded-full bg-green-500 text-black">Disponible</span>
+                @for (item of filteredEmployees; track item.id) {
+
+                    <div
+                        class="h-auto rounded-lg p-5 cursor-pointer flex flex-col gap-3 
+                            border hover:shadow-md transition-shadow duration-150"
+                        [ngClass]="{
+                            'bg-emerald-50 border-emerald-300': item.isAvailable,
+                            'bg-gray-50 border-gray-300': !item.isAvailable
+                        }"
+                    >
+                        <!-- Nombre del empleado -->
+                        <h3 class="text-base font-semibold text-gray-900">
+                            {{ item.firstName }} {{ item.lastName }}
+                        </h3>
+
+                        <!-- Estado de disponibilidad -->
+                        @if (item.isAvailable === true) {
+                            <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium
+                                bg-emerald-600 text-white rounded">
+                                Disponible
+                            </span>
+                        } @else {
+                            <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium
+                                bg-gray-500 text-white rounded">
+                                No Disponible
+                            </span>
+                        }
+
+                        <!-- Base -->
+                        <div class="flex flex-col gap-1 pt-2 border-t border-gray-200">
+                            <span class="text-xs text-gray-500 font-medium uppercase">Base</span>
+                            <span class="text-sm text-gray-900 font-medium">{{ item.base }}</span>
+                        </div>
+
+                        <!-- Posición -->
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs text-gray-500 font-medium uppercase">Cargo</span>
+                            <span class="text-sm text-gray-900 font-medium">{{ item.position }}</span>
+                        </div>
+
+                    </div>
 
                 }
-                @else {
-
-                <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium
-                        rounded-full bg-green-500 text-black">No Disponible</span>
-
-                }
-
-                <span class="inline-flex items-center px-3 py-1 mt-2 ml-2 text-sm font-medium
-                        rounded-full bg-green-500 text-black">{{ item.base }}</span>
-
-
-                <span class="inline-flex items-center px-3 py-1 mt-2 text-xs font-medium
-                        rounded-full bg-green-500 text-black">{{ item.position }}</span>
-
-
-
 
             </div>
-
-            }
-
-        </div>
+        }
 
     </div>
 

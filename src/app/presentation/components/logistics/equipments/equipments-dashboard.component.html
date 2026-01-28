@@ -1,30 +1,30 @@
 <div class="w-full h-screen flex flex-col items-center pt-5 gap-5">
     
     <!--Equipments section-->
-    <div class="w-11/12 h-auto bg-white p-8 rounded-3xl border border-gray-200">
+    <div class="w-11/12 h-auto bg-white shadow-sm p-8 rounded-lg border border-gray-300">
         
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">Equipos</h1>
+        <h1 class="text-2xl font-semibold text-gray-900 mb-6">Equipos</h1>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <!-- Total Equipos -->
-            <div class="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-l-4 border-blue-500 cursor-pointer">
-                <p class="text-sm text-gray-600 font-medium mb-2">Total equipos</p>
-                <p class="text-4xl font-bold text-gray-800">{{ equipmentsTotal }}</p>
+            <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-600 cursor-pointer">
+                <p class="text-xs text-gray-600 font-medium mb-2 uppercase tracking-wide">Total equipos</p>
+                <p class="text-3xl font-semibold text-gray-900">{{ equipmentsTotal }}</p>
             </div>
             
             <!-- Equipos Filtrados -->
-            <div class="bg-linear-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-l-4 border-purple-500">
-                <p class="text-sm text-gray-600 font-medium mb-2">Equipos mostrados</p>
-                <p class="text-4xl font-bold text-gray-800">{{ filteredEquipments.length }}</p>
-                <p class="text-sm text-gray-500 mt-1">{{ selectedFilter }}</p>
+            <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-600">
+                <p class="text-xs text-gray-600 font-medium mb-2 uppercase tracking-wide">Equipos mostrados</p>
+                <p class="text-3xl font-semibold text-gray-900">{{ filteredEquipments.length }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ selectedFilter }}</p>
             </div>
 
             <button
                 class="mt-4 self-end inline-flex items-center gap-2
-                    px-4 py-2 text-sm font-semibold bg-blue-100
-                    text-black border-l-8 border-blue-500 rounded-full cursor-pointer
-                    hover:bg-blue-200 transition-colors"
+                    px-5 py-2.5 text-sm font-medium bg-slate-700
+                    text-white rounded-lg cursor-pointer
+                    hover:bg-slate-800 transition-colors"
             >
                 Agregar equipo
             </button>
@@ -32,23 +32,28 @@
     </div>
 
     <!-- Sección de Filtros -->
-    <div class="w-11/12 h-auto bg-white p-6 rounded-3xl border border-gray-200">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Filtrar por categoría</h2>
+    <div class="w-11/12 h-auto bg-white shadow-sm p-6 rounded-lg border border-gray-300">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Filtrar por categoría</h2>
         
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-2">
             
             <!-- Botón TODOS -->
             <button
                 (click)="filterByCategory('TODOS')"
                 [ngClass]="{
-                    'bg-blue-500 text-white border-blue-600': selectedFilter === 'TODOS',
-                    'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200': selectedFilter !== 'TODOS'
+                    'bg-slate-700 text-white': selectedFilter === 'TODOS',
+                    'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== 'TODOS'
                 }"
-                class="px-4 py-2 rounded-full border-2 font-medium transition-all duration-200
-                    flex items-center gap-2"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                    flex items-center gap-2 border border-gray-300"
             >
                 <span>TODOS</span>
-                <span class="bg-white text-gray-800 px-2 py-0.5 rounded-full text-xs font-bold">
+                <span 
+                    [ngClass]="{
+                        'bg-white text-slate-700': selectedFilter === 'TODOS',
+                        'bg-slate-700 text-white': selectedFilter !== 'TODOS'
+                    }"
+                    class="px-2 py-0.5 rounded text-xs font-semibold">
                     {{ getCategoryCount('TODOS') }}
                 </span>
             </button>
@@ -58,19 +63,19 @@
                 <button
                     (click)="filterByCategory(category)"
                     [ngClass]="{
-                        'bg-blue-500 text-white border-blue-600': selectedFilter === category,
-                        'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200': selectedFilter !== category
+                        'bg-slate-700 text-white': selectedFilter === category,
+                        'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== category
                     }"
-                    class="px-4 py-2 rounded-full border-2 font-medium transition-all duration-200
-                        flex items-center gap-2"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                        flex items-center gap-2 border border-gray-300"
                 >
                     <span>{{ category }}</span>
                     <span 
                         [ngClass]="{
-                            'bg-white text-gray-800': selectedFilter === category,
-                            'bg-blue-500 text-white': selectedFilter !== category
+                            'bg-white text-slate-700': selectedFilter === category,
+                            'bg-slate-700 text-white': selectedFilter !== category
                         }"
-                        class="px-2 py-0.5 rounded-full text-xs font-bold"
+                        class="px-2 py-0.5 rounded text-xs font-semibold"
                     >
                         {{ getCategoryCount(category) }}
                     </span>
@@ -80,66 +85,67 @@
     </div>
 
     <!-- Grid de Equipos -->
-    <div class="w-11/12 h-auto bg-white p-8 rounded-3xl border border-gray-200 flex justify-center">
+    <div class="w-11/12 h-auto bg-white shadow-sm p-8 rounded-lg border border-gray-300 flex justify-center">
         
         @if (loading) {
             <div class="flex items-center justify-center py-12">
-                <p class="text-gray-500 text-lg">Cargando equipos...</p>
+                <p class="text-gray-600 text-base">Cargando equipos...</p>
             </div>
         }
         
         @else if (error) {
             <div class="flex items-center justify-center py-12">
-                <p class="text-red-500 text-lg">{{ error }}</p>
+                <p class="text-red-700 text-base">{{ error }}</p>
             </div>
         }
         
         @else if (filteredEquipments.length === 0) {
             <div class="flex items-center justify-center py-12">
-                <p class="text-gray-500 text-lg">No hay equipos para mostrar</p>
+                <p class="text-gray-600 text-base">No hay equipos para mostrar</p>
             </div>
         }
         
         @else {
-            <div class="w-full h-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 cursor-pointer">
+            <div class="w-full h-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 
                 @for (item of filteredEquipments; track item.id) {
                     <div
                         [ngClass]="{
-                            'bg-green-100 border-green-400': item.isAvailable,
-                            'bg-red-100 border-red-400': !item.isAvailable
+                            'bg-emerald-50 border-emerald-300': item.isAvailable,
+                            'bg-gray-50 border-gray-300': !item.isAvailable
                         }"
-                        class="h-auto rounded-3xl p-6 cursor-pointer flex flex-col gap-3 
-                            border-2 hover:shadow-lg transition-shadow duration-200"
+                        class="h-auto rounded-lg p-5 cursor-pointer flex flex-col gap-3 
+                            border hover:shadow-md transition-shadow duration-150"
                     >
                         <!-- Código del equipo -->
-                        <h3 class="text-xl font-bold text-gray-800 tracking-wide">
+                        <h3 class="text-base font-semibold text-gray-900">
                             {{ item.code }}
                         </h3>
                         
                         <!-- Serial Number -->
-                        <p class="text-sm text-gray-600 font-medium">
-                            S/N: {{ item.serialNumber }}
-                        </p>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs text-gray-500 font-medium uppercase">Serie</span>
+                            <span class="text-sm text-gray-900 font-medium">{{ item.serialNumber }}</span>
+                        </div>
 
                         <!-- Estado de disponibilidad -->
                         @if (item.isAvailable === true) {
-                            <span class="inline-flex items-center justify-center px-3 py-1.5 text-sm font-semibold
-                                rounded-full bg-green-500 text-white">
-                                ✓ Disponible
+                            <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium
+                                bg-emerald-600 text-white rounded">
+                                Disponible
                             </span>
                         } @else {
-                            <span class="inline-flex items-center justify-center px-3 py-1.5 text-sm font-semibold
-                                rounded-full bg-red-500 text-white">
-                                ✗ No Disponible
+                            <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-medium
+                                bg-gray-500 text-white rounded">
+                                No Disponible
                             </span>
                         }
                         
                         <!-- Categoría del equipo -->
-                        <span class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold
-                            rounded-full bg-blue-500 text-white mt-auto">
-                            {{ item.name }}
-                        </span>
+                        <div class="flex flex-col gap-1 pt-2 border-t border-gray-200 mt-auto">
+                            <span class="text-xs text-gray-500 font-medium uppercase">Categoría</span>
+                            <span class="text-sm text-gray-900 font-medium">{{ item.name }}</span>
+                        </div>
                     </div>
                 }
             </div>

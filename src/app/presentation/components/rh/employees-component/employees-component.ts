@@ -21,6 +21,9 @@ export class EmployeesComponent implements OnInit, OnDestroy {
     employeesTotal = 0;
     employees: Employee[] = [];
     
+    selectedFilter : string = 'TODOS';
+    availableCategories: string[] = [];
+    filteredEmployees: Employee[] = [];
     
     
     loading = false;
@@ -35,7 +38,9 @@ export class EmployeesComponent implements OnInit, OnDestroy {
     
     ngOnDestroy(): void {
         
+        this.destroy$.next();
         
+        this.destroy$.complete();
         
     }
     
@@ -77,6 +82,10 @@ export class EmployeesComponent implements OnInit, OnDestroy {
 
                 this.employees = response.allEmployees;
                 
+                this.filteredEmployees = response.allEmployees;
+                
+                this.extractCategories();
+                
                 this.loading = false;
                 
             },
@@ -92,6 +101,43 @@ export class EmployeesComponent implements OnInit, OnDestroy {
             
         });
         
+        
+    }
+    
+    
+    extractCategories() {
+        
+        const categoriesSet = new Set(this.employees.map(eq => eq.base));
+        
+        
+        this.availableCategories = Array.from(categoriesSet).sort();
+        
+    }
+    
+    filterByCategory(category: string) {
+        
+        this.selectedFilter = category;
+        
+        if(category === 'TODOS') {
+            
+            this.filteredEmployees = this.employees;
+        } else {
+            
+            this.filteredEmployees = this.employees.filter(e => e.base === category);
+        }
+        
+    }
+    
+    
+    getCategoryCount(category: string): number {
+        
+        if (category === 'TODOS') {
+            
+            return this.employees.length;
+            
+        }
+        
+        return this.employees.filter(e => e.base === category).length;
         
     }
 
