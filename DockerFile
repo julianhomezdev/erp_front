@@ -1,4 +1,4 @@
-FROM stefanscherer/node-windows:latest
+FROM mcr.microsoft.com/windows/node:20-lts
 WORKDIR /app
 
 # Configura npm
