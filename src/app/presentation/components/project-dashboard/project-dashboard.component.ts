@@ -217,7 +217,7 @@ export class ProjectDashboardComponent implements OnInit {
       
       // Recursos
       row['Personal'] = plan.resources?.employees?.map((e: any) => 
-        `${e.firstName} ${e.lastName}`
+        `${e.firstName} `
       ).join(', ') || '';
       
       row['Equipos'] = plan.resources?.equipment?.map((e: any) => 

@@ -53,6 +53,8 @@ export class EmployeesComponent implements OnInit, OnDestroy {
             
             next: (response) => {
                 
+               
+                
                 this.employees = this.mergeEmployeesWithAssignments(
                     
                     response.allEmployees, 
@@ -86,16 +88,21 @@ export class EmployeesComponent implements OnInit, OnDestroy {
         assignments: EmployeeAssignment[]
         
     ): Employee[] {
+
         
         return employees.map(employee => {
             
+            const employeeFullName = employee.name.trim().toUpperCase();
+            
             const employeeAssignments = assignments.filter(
                 
-                assignment => 
+                assignment => {
                     
-                    assignment.name === employee.firstName && 
-                    
-                    assignment.lastName === employee.lastName
+                    const assignmentName = assignment.name.trim().toUpperCase();
+                
+                    return assignmentName === employeeFullName;
+                
+                }
                     
             );
             
