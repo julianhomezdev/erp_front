@@ -1,9 +1,13 @@
 export interface EmployeeAssignment {
     
-    employeeId: number;
-    hoursPerMonth: number;
-    startDate: Date;
-    endDate: Date;
+    id: number;
+    name: string;
+    lastName: string;
+    startDate: string;
+    endDate: string;
+    samplingPlanId: string;
+    base: string;
+    status: number;
     
     
 }

@@ -7,11 +7,17 @@ import { FormsModule } from '@angular/forms';
 
 
 @Component({
+  
   selector: 'project-dashboard-component',
+  
   standalone: true,
+  
   imports: [CommonModule, RouterModule, FormsModule],
+  
   templateUrl: './project-dashboard.component.html',
+  
   styleUrls: ['./project-dashboard.component.css']
+  
 })
 export class ProjectDashboardComponent implements OnInit {
   
@@ -103,7 +109,6 @@ export class ProjectDashboardComponent implements OnInit {
     const excelData = this.prepareExcelData();
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     
-    // Ajustar anchos de columna
     const columnWidths = [
       { wch: 20 }, // Proyecto
       { wch: 15 }, // Código Contrato

@@ -2,11 +2,9 @@
 
     <!--Employees SECTION-->
     <div class="w-11/12 h-auto bg-white shadow-sm p-8 rounded-lg border border-gray-300">
-
         <h1 class="text-2xl font-semibold text-gray-900 mb-6">Personal</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
             <!-- Total empleados -->
             <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-600 cursor-pointer">
                 <p class="text-xs text-gray-600 font-medium mb-2 uppercase tracking-wide">Total personas</p>
@@ -20,17 +18,13 @@
                 <p class="text-xs text-gray-500 mt-1">{{ selectedFilter }}</p>
             </div>
 
-            <button
-                class="mt-4 self-end inline-flex items-center gap-2
+            <button class="mt-4 self-end inline-flex items-center gap-2
                     px-5 py-2.5 text-sm font-medium bg-slate-700
                     text-white rounded-lg cursor-pointer
-                    hover:bg-slate-800 transition-colors"
-            >
+                    hover:bg-slate-800 transition-colors">
                 Agregar persona
             </button>
-
         </div>
-
     </div>
 
     <!-- Sección de Filtros -->
@@ -38,7 +32,6 @@
         <h2 class="text-lg font-medium text-gray-900 mb-4">Filtrar por base</h2>
         
         <div class="flex flex-wrap gap-2">
-            
             <!-- Botón TODOS -->
             <button
                 (click)="filterByCategory('TODOS')"
@@ -47,8 +40,7 @@
                     'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== 'TODOS'
                 }"
                 class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
-                    flex items-center gap-2 border border-gray-300"
-            >
+                    flex items-center gap-2 border border-gray-300">
                 <span>TODOS</span>
                 <span 
                     [ngClass]="{
@@ -69,16 +61,14 @@
                         'bg-gray-100 text-gray-700 hover:bg-gray-200': selectedFilter !== category
                     }"
                     class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
-                        flex items-center gap-2 border border-gray-300"
-                >
+                        flex items-center gap-2 border border-gray-300">
                     <span>{{ category }}</span>
                     <span 
                         [ngClass]="{
                             'bg-white text-slate-700': selectedFilter === category,
                             'bg-slate-700 text-white': selectedFilter !== category
                         }"
-                        class="px-2 py-0.5 rounded text-xs font-semibold"
-                    >
+                        class="px-2 py-0.5 rounded text-xs font-semibold">
                         {{ getCategoryCount(category) }}
                     </span>
                 </button>
@@ -118,8 +108,8 @@
                         [ngClass]="{
                             'bg-emerald-50 border-emerald-300': item.isAvailable,
                             'bg-gray-50 border-gray-300': !item.isAvailable
-                        }"
-                    >
+                        }">
+                        
                         <!-- Nombre del empleado -->
                         <h3 class="text-base font-semibold text-gray-900">
                             {{ item.firstName }} {{ item.lastName }}
@@ -148,6 +138,37 @@
                         <div class="flex flex-col gap-1">
                             <span class="text-xs text-gray-500 font-medium uppercase">Cargo</span>
                             <span class="text-sm text-gray-900 font-medium">{{ item.position }}</span>
+                        </div>
+
+                        <!-- SECCIÓN DE ASIGNACIONES -->
+                        <div class="flex flex-col gap-2 pt-3 border-t border-gray-200 mt-2">
+                            <span class="text-xs text-gray-500 font-medium uppercase">Asignaciones Futuras</span>
+                            
+                            @if (item.assignments && item.assignments.length > 0) {
+                                <div class="flex flex-col gap-2">
+                                    @for (assignment of item.assignments; track assignment.samplingPlanId) {
+                                        <div class="bg-white border border-gray-200 rounded p-2.5">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-xs font-semibold text-slate-700">
+                                                    Plan #{{ assignment.samplingPlanId }}
+                                                </span>
+                                                
+                                                    <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                                        Activo
+                                                    </span>
+                                               
+                                            </div>
+                                            <div class="text-xs text-gray-600">
+                                                <p>📅 {{ formatDate(assignment.startDate) }} - {{ formatDate(assignment.endDate) }}</p>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            } @else {
+                                <div class="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                                    <p class="text-xs text-gray-500 italic">Sin asignaciones futuras</p>
+                                </div>
+                            }
                         </div>
 
                     </div>
