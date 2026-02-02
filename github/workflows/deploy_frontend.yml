@@ -1,0 +1,27 @@
+name: Deploy Frontend to Server
+
+on: 
+  push:
+    branches:
+      - main
+      
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out the frontend code
+      uses: actions/checkout@v3
+      
+    - name: SSH into the server and deploy frontend
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd /var/www/dev/frontend/erp_front
+          git pull origin main
+          sudo docker compose down
+          sudo docker compose up -d --build
