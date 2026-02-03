@@ -86,9 +86,11 @@
         }
         
         @else if (error) {
+            
             <div class="flex items-center justify-center py-12">
                 <p class="text-red-700 text-base">{{ error }}</p>
             </div>
+            
         }
         
         @else if (filteredEmployees.length === 0) {

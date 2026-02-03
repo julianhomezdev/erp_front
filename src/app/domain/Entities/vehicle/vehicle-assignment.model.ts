@@ -1,7 +1,10 @@
 export interface VehicleAssignment {
     
-    vehicleId: number;
-    startDate: Date;
-    endDate: Date;
     
+    
+    numberPlate: string;
+    startDate: string;
+    endDate: string;
+    samplingPlanId: string;
+
 }

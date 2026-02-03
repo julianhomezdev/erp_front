@@ -15,29 +15,41 @@ import { EmployeeAssignment } from "../../../../domain/Entities/employee/employe
 export class EmployeesComponent implements OnInit, OnDestroy {
 
     employeesTotal = 0;
+    
     employees: Employee[] = [];
     
     selectedFilter: string = 'TODOS';
+    
     availableCategories: string[] = [];
+    
     filteredEmployees: Employee[] = [];
     
     loading = false;
+    
     error: string | null = null;
     
     private employeeService = inject(EmployeeService);
+    
     private destroy$ = new Subject<void>();
     
     ngOnDestroy(): void {
+        
         this.destroy$.next();
+        
         this.destroy$.complete();
+        
     }
     
     ngOnInit(): void {
+        
         this.loadAllData();
+        
     }
     
     loadAllData() {
+        
         this.loading = true;
+        
         this.error = null;
         
         forkJoin({

@@ -29,10 +29,8 @@ export class VehicleService {
   }
 
   getAvailableVehiclesWithOutDate(): Observable<Vehicle[]> {
-    
-    
+      
     return this.http.get<Vehicle[]>(`${this.apiUrl}/available/all`);
-    
     
   }
 
@@ -41,9 +39,6 @@ export class VehicleService {
     return this.http.get<Vehicle>(`${this.apiUrl}/${id}`);
 
   }
-  
-  
-
 
   createVehicle(vehicle: CreateVehicle): Observable<Vehicle> {
 
@@ -60,6 +55,13 @@ export class VehicleService {
   deleteVehicle(id: number): Observable<void> {
 
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    
+  }
+  
+  getVehicleAssignments(): Observable<VehicleAssignment[]> {
+    
+    
+    return this.http.get<VehicleAssignment[]>(`${this.apiUrl}/assignments`);
     
   }
 

@@ -1,3 +1,5 @@
+import { VehicleAssignment } from "./vehicle-assignment.model";
+
 export interface Vehicle {
     id: number;
     plateNumber: string;
@@ -9,6 +11,7 @@ export interface Vehicle {
     costPerDay?: number;
     supplierId?: number;
     locationId?: number;
+    assignments: VehicleAssignment[];
 }
 
 export interface CreateVehicle {
