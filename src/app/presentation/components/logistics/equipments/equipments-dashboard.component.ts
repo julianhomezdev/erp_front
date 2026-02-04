@@ -3,6 +3,7 @@ import { Component, inject, OnDestroy, OnInit } from "@angular/core";
 import { EquipmentService } from "../../../../core/services/equipment.service";
 import { Equipment } from "../../../../domain/Entities/Equipment/equipment.model";
 import { forkJoin, Subject, takeUntil } from "rxjs";
+import { EquipmentAssignment } from "../../../../domain/Entities/Equipment/equipment-assignment.model";
 
 @Component({
 
@@ -65,6 +66,8 @@ export class EquipmentsDashboard implements OnInit, OnDestroy {
         forkJoin({
 
             equipments: this.equipmentService.getAllEquipment(),
+            
+            assignments: this.equipmentService.getEquipmentAssignments()
       
         })
         
@@ -76,9 +79,15 @@ export class EquipmentsDashboard implements OnInit, OnDestroy {
 
                 this.equipmentsTotal = response.equipments.length;
                 
-                this.equipments = response.equipments;
-                
-                this.filteredEquipments = response.equipments;
+                this.equipments = this.mergeEquipmentsWithAssignments(
+                    
+                    response.equipments,
+                    response.assignments
+                    
+                    
+                )
+        
+                this.filteredEquipments = this.equipments;
                 
                 this.extractCategories();
                                 
@@ -97,6 +106,57 @@ export class EquipmentsDashboard implements OnInit, OnDestroy {
             
         });
         
+        
+    }
+    
+    
+    mergeEquipmentsWithAssignments(
+        
+        equipments: Equipment[],
+        
+        assignments: EquipmentAssignment[]
+        
+        
+    ): Equipment[] {
+        
+        return equipments.map(equipment => {
+            
+            const equipmentCode = equipment.code.trim().toUpperCase();
+            
+            const equipmentAssignments = assignments.filter(
+                
+                assignment => {
+                    
+                    
+                    const assignmentCode = assignment.code.trim().toUpperCase();
+                    
+                    return assignmentCode === equipmentCode;
+                    
+                    
+                }  
+                
+            );
+            
+            
+            const sortedAssignments = equipmentAssignments.sort((a, b) =>
+            
+                new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            
+            
+            );
+            
+            
+            return  {
+                
+                
+                ...equipment,
+                
+                assignments: sortedAssignments
+                
+                
+            };
+            
+        });
         
     }
     
@@ -138,5 +198,21 @@ export class EquipmentsDashboard implements OnInit, OnDestroy {
         return this.equipments.filter(eq => eq.name === category).length;
         
     }
-
+    
+    formatDate(dateString: string): string {
+        
+        
+        const date = new Date(dateString);
+        
+        return date.toLocaleDateString('es-CO', {
+            
+            
+            day: '2-digit', 
+            
+            month: 'short', 
+            
+            year: 'numeric'
+       
+        });           
+    }
 }

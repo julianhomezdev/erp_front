@@ -176,9 +176,12 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     // Formulario de plan de muestreo
     this.planForm = this.fb.group({
-      planCode: ['', Validators.required],
+      planCode: [''],
       startDate: [''],
       endDate: [''],
+      
+      totalSites: [1, [Validators.required, Validators.min(1)]],
+      
       sites: this.fb.array([]),
       resourceStartDate: [''],
       resourceEndDate: [''],
@@ -330,11 +333,20 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 }
 
   private resourcesLoadedCount = 0;
+  
   private checkAllResourcesLoaded(): void {
+    
     this.resourcesLoadedCount++;
+    
     if (this.resourcesLoadedCount >= 3) {
+      
       this.loading = false;
+      
+      this.resourcesLoadedCount = 0;
+      
+      
     }
+    
   }
 
   calculateDaysBetweenDates(startDate: string, endDate: string): number {
@@ -463,20 +475,81 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       }
     });
   }
+  
+  generateMultipleSites(): void {
+    const count = this.planForm.value.totalSites || 1;
+    const baseName = this.planForm.value.planName || this.planForm.value.planCode;
+    const executionDate = this.planForm.value.startDate || '';
+    
+    this.sitesArray.clear();
+    
+    
+    for (let i = 0; i < count; i++) {
+      const siteGroup = this.fb.group({
+        name: [baseName],  
+        matrixId: ['', Validators.required],
+        isSubcontracted: [false],
+        subcontractorName: [''],
+        executionDate: [executionDate],  
+        hasReport: [false],
+        hasGDB: [false]
+      });
 
+      siteGroup.get('isSubcontracted')?.valueChanges
+      
+        .pipe(takeUntil(this.destroy$))
+        
+        
+        .subscribe(isSubcontracted => {
+          
+          const subcontractorControl = siteGroup.get('subcontractorName');
+          
+          if (isSubcontracted) {
+            
+            subcontractorControl?.setValidators([Validators.required]);
+            
+            
+          } else {
+            
+            subcontractorControl?.clearValidators();
+            
+          }
+          
+          subcontractorControl?.updateValueAndValidity();
+        });
+
+      this.sitesArray.push(siteGroup);
+    }
+    
+    this.formChanges$.next();
+  }
+  
+  
   get sitesArray(): FormArray {
     return this.planForm.get('sites') as FormArray;
   }
 
   addSite(): void {
+    
+    const baseName = this.planForm.value.planName || this.planForm.value.planCode;
+    const executionDate = this.planForm.value.startDate || '';
+    
     const siteGroup = this.fb.group({
-      name: ['', Validators.required],
+      
+      name: [baseName],
+      
       matrixId: ['', Validators.required],
+      
       isSubcontracted: [false],
+      
       subcontractorName: [''],
-      executionDate: [''],
+      
+      executionDate: [executionDate],
+      
       hasReport: [false],
+      
       hasGDB: [false]
+      
     });
 
     // Validación condicional para subcontratación
@@ -710,23 +783,37 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   // ==========================================
 
   addPlanToCurrentOds(): void {
+    
     if (!this.planForm.valid) {
+      
       this.errorMessage = 'Complete los campos requeridos del plan';
+      
       return;
+      
     }
 
     if (this.sitesArray.length === 0) {
+      
       this.errorMessage = 'Agregue al menos un sitio de monitoreo';
+      
       return;
+      
     }
 
     if (this.planForm.value.selectedEmployeeIds.length === 0) {
+      
       this.errorMessage = 'Asigne al menos un empleado al plan';
+      
       return;
+      
     }
 
-    const sites = this.sitesArray.value.map((site: any) => {
-      const matrix = this.matrices.find(m => m.id === Number(site.matrixId));
+    const sites = this.sitesArray.value.map((site: any, index: number) => {
+      
+      
+    const matrix = this.matrices.find(m => m.id === Number(site.matrixId));
+    
+      
       return {
         name: site.name,
         matrixId: Number(site.matrixId),

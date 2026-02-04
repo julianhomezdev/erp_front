@@ -1,3 +1,5 @@
+import { EquipmentAssignment } from "./equipment-assignment.model";
+
 export interface Equipment {
   id: number;
   code: string;
@@ -6,4 +8,5 @@ export interface Equipment {
   serialNumber: string;
   status: string;
   isAvailable: boolean;
+  assignments: EquipmentAssignment[];
 }

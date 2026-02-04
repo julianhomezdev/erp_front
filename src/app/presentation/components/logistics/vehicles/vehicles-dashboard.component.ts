@@ -9,8 +9,11 @@ import { VehicleAssignment } from "../../../../domain/Entities/vehicle/vehicle-a
 @Component({
 
     selector: 'vehicles-dashboard',
+    
     standalone: true,
+    
     imports: [CommonModule],
+    
     templateUrl: './vehicles-dashboard.component.html'
 
 
@@ -24,6 +27,9 @@ export class VehiclesDashboard implements OnInit, OnDestroy {
     vehiclesTotal = 0;
     avaibleVehicles = 0;
     vehicles :Vehicle[] = [];
+    
+    
+    
     loading = false;
     error : string | null = null;
     
@@ -56,6 +62,7 @@ export class VehiclesDashboard implements OnInit, OnDestroy {
     loadAllData() {
         
         this.loading = true;
+        
         this.error = null;
 
         forkJoin({
