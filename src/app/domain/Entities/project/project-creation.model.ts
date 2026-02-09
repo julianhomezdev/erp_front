@@ -1,12 +1,71 @@
-  export interface CreateProject {
-    
-    ChCode: string;
-    Contract: ContractData;
-    ServiceOrders: ServiceOrder[];
-    CoordinatorIds: number[];
-    ProjectDetails: ProjectDetails;
-  }
-
+export interface CreateProject {
+  contract: {
+    contractCode: string;
+    contractName?: string;
+    clientId: number;
+    startDate?: string | null;
+    endDate?: string | null;
+  };
+  serviceOrders: Array<{
+    odsCode: string;
+    odsName?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    samplingPlans: Array<{
+      planCode: string;
+      planName?: string;
+      startDate?: string | null;
+      endDate?: string | null;
+      coordinatorId: number;
+      sites: Array<{
+        name: string;
+        matrixId: number;
+        executionDate?: string | null;
+        hasReport: boolean;
+        hasGDB: boolean;
+      }>;
+      resources: {
+        mode: string;
+        startDate?: string | null;
+        endDate?: string | null;
+        locationId?: number | null;
+        employeeIds: number[];
+        equipmentIds: number[];
+        vehicleIds: number[];
+        employeeQuantities: Array<{
+          categoryName: string;
+          quantity: number;
+        }>;
+        equipmentQuantities: Array<{
+          categoryName: string;
+          quantity: number;
+        }>;
+        vehicleQuantity?: number;
+      };
+      budget: {
+        chCode?: string;  
+        transportCostChemilab: number;
+        transportBilledToClient: number;
+        logisticsCostChemilab: number;
+        logisticsBilledToClient: number;
+        subcontractingCostChemilab: number;
+        subcontractingBilledToClient: number;
+        fluvialTransportCostChemilab: number;
+        fluvialTransportBilledToClient: number;
+        reportsCostChemilab: number;
+        reportsBilledToClient: number;
+        notes?: string;
+      };
+    }>;
+  }>;
+  coordinatorIds: number[];
+  projectDetails: {
+    projectName: string;
+    projectDescription?: string;
+    priority: string;
+  };
+  chCode: string;  
+}
   export interface ContractData {
     ContractCode: string;
     ContractName: string;

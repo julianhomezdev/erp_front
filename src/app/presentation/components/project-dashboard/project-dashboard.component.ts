@@ -4,11 +4,12 @@ import { Router, RouterModule } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
 import * as XLSX from 'xlsx';
 import { FormsModule } from '@angular/forms';
+import { ProjectEditComponent } from '../project-edit/project-edit.component';
 
 @Component({
   selector: 'project-dashboard-component',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ProjectEditComponent],
   templateUrl: './project-dashboard.component.html',
   styleUrls: ['./project-dashboard.component.css']
 })
@@ -23,11 +24,59 @@ export class ProjectDashboardComponent implements OnInit {
   selectedProject: any = null;
   filterStartDate: string = '';
   filterEndDate: string = '';
+
+  showResourceEditModal = false;
+  selectedPlanForEdit: any = null;
   
   ngOnInit(): void {
     this.loadProjects();
   }
+
+  editResources(planId: number): void {
+    const plan = this.findPlanById(planId);
+    if (plan) {
+      this.selectedPlanForEdit = plan;
+      this.showResourceEditModal = true;
+    }
+  }
+
+  assignDetailedResources(planId: number): void {
+    const plan = this.findPlanById(planId);
+    if (plan) {
+      this.selectedPlanForEdit = {
+        ...plan,
+        resourceMode: 'DETAILED' 
+      };
+      this.showResourceEditModal = true;
+    }
+  }
   
+  private findPlanById(planId: number): any {
+    if (!this.selectedProject?.serviceOrders) return null;
+    
+    for (const ods of this.selectedProject.serviceOrders) {
+      for (const plan of ods.samplingPlans) {
+        if (plan.id === planId) {
+          return plan;
+        }
+      }
+    }
+    return null;
+  }
+
+  closeResourceEditModal(): void {
+    this.showResourceEditModal = false;
+    this.selectedPlanForEdit = null;
+  }
+
+  onResourcesSaved(): void {
+    this.closeResourceEditModal();
+    // Recargar los detalles del proyecto
+    if (this.selectedProject?.id) {
+      this.viewProject(this.selectedProject.id);
+    }
+  }
+
   loadProjects(): void {
     this.projectService.getAllProjects().subscribe({
       next: (data) => {

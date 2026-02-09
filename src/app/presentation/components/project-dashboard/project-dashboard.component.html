@@ -270,32 +270,95 @@
                                             </div>
 
                                             <!-- Recursos -->
-                                            <div *ngIf="plan.resources"
-                                                class="bg-gray-50 rounded-lg p-4 border border-gray-300">
-                                                <p
-                                                    class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                                                    Recursos Asignados
-                                                </p>
-                                                <div class="space-y-3">
-                                                    <div *ngIf="plan.resources.employees?.length > 0">
-                                                        <p class="text-xs font-semibold text-gray-600 mb-1">Personal</p>
-                                                        <p class="text-sm text-gray-900">{{
-                                                            getEmployeeNames(plan.resources.employees) }}</p>
-                                                    </div>
-                                                    <div *ngIf="plan.resources.equipment?.length > 0">
-                                                        <p class="text-xs font-semibold text-gray-600 mb-1">Equipos</p>
-                                                        <p class="text-sm text-gray-900">{{
-                                                            getEquipmentNames(plan.resources.equipment) }}</p>
-                                                    </div>
-                                                    <div *ngIf="plan.resources.vehicles?.length > 0">
-                                                        <p class="text-xs font-semibold text-gray-600 mb-1">Vehículos
-                                                        </p>
-                                                        <p class="text-sm text-gray-900">{{
-                                                            getVehiclePlates(plan.resources.vehicles) }}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
+                                            <!-- En el modal de detalles, modifica la sección de recursos -->
+<div *ngIf="plan.resources || plan.resourceMode === 'QUANTITY'" 
+     class="bg-gray-50 rounded-lg p-4 border border-gray-300">
+  <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+    Recursos Asignados
+    <span class="ml-2 text-xs font-normal px-2 py-1 rounded"
+          [ngClass]="plan.resourceMode === 'QUANTITY' 
+            ? 'bg-amber-100 text-amber-800' 
+            : 'bg-blue-100 text-blue-800'">
+      {{ plan.resourceMode === 'QUANTITY' ? 'MODO CANTIDAD' : 'MODO DETALLADO' }}
+    </span>
+  </p>
+  
+  <!-- Mostrar recursos según el modo -->
+  <div *ngIf="plan.resourceMode === 'QUANTITY'">
+    <div class="space-y-2">
+      <!-- Cantidades de empleados -->
+      <div *ngIf="plan.employeeQuantities?.length > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Personal (Cantidades)</p>
+        <div class="space-y-1">
+          <div *ngFor="let eq of plan.employeeQuantities" class="text-sm text-gray-900">
+            • {{ eq.quantity }} {{ eq.categoryName }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Cantidades de equipos -->
+      <div *ngIf="plan.equipmentQuantities?.length > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Equipos (Cantidades)</p>
+        <div class="space-y-1">
+          <div *ngFor="let eq of plan.equipmentQuantities" class="text-sm text-gray-900">
+            • {{ eq.quantity }} {{ eq.categoryName }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Cantidad de vehículos -->
+      <div *ngIf="plan.vehicleQuantity > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Vehículos</p>
+        <p class="text-sm text-gray-900">{{ plan.vehicleQuantity }} vehículo(s)</p>
+      </div>
+      
+      <!-- Mensaje si no hay cantidades -->
+      <div *ngIf="!plan.employeeQuantities?.length && !plan.equipmentQuantities?.length && !plan.vehicleQuantity"
+           class="text-xs text-gray-500 italic">
+        No se han especificado cantidades de recursos
+      </div>
+    </div>
+    
+    <!-- Botón para asignar recursos detallados -->
+    <div class="mt-3 pt-3 border-t border-gray-300">
+      <button (click)="assignDetailedResources(plan.id)"
+              class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+        📝 Asignar recursos específicos
+      </button>
+    </div>
+  </div>
+  
+  <!-- Mostrar recursos detallados -->
+  <div *ngIf="plan.resourceMode === 'DETAILED' && plan.resources">
+    <div class="space-y-3">
+      <div *ngIf="plan.resources.employees?.length > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Personal</p>
+        <p class="text-sm text-gray-900">{{ getEmployeeNames(plan.resources.employees) }}</p>
+      </div>
+      <div *ngIf="plan.resources.equipment?.length > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Equipos</p>
+        <p class="text-sm text-gray-900">{{ getEquipmentNames(plan.resources.equipment) }}</p>
+      </div>
+      <div *ngIf="plan.resources.vehicles?.length > 0">
+        <p class="text-xs font-semibold text-gray-600 mb-1">Vehículos</p>
+        <p class="text-sm text-gray-900">{{ getVehiclePlates(plan.resources.vehicles) }}</p>
+      </div>
+      
+      <!-- Botón para cambiar a modo cantidad -->
+      <div class="mt-3 pt-3 border-t border-gray-300">
+        <button (click)="editResources(plan.id)"
+                class="text-xs text-amber-600 hover:text-amber-800 font-medium">
+          ✏️ Editar asignación de recursos
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Fechas de recursos -->
+  <div *ngIf="plan.resourceStartDate" class="mt-2 pt-2 border-t border-gray-300 text-xs text-gray-600">
+    <p>📅 {{ plan.resourceStartDate }} - {{ plan.resourceEndDate }}</p>
+  </div>
+</div>
                                         </div>
 
                                         <div *ngIf="plan.budget">
@@ -422,4 +485,37 @@
         </div>
 
     </div>
+</div>
+
+
+<!-- Modal para editar recursos (al final del archivo) -->
+<div *ngIf="showResourceEditModal && selectedPlanForEdit && selectedProject" 
+     class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-50">
+  
+  <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    
+    <!-- Header -->
+    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <h3 class="text-lg font-semibold text-gray-900">
+        Editar Recursos - {{ selectedPlanForEdit.planCode }}
+      </h3>
+      <button (click)="closeResourceEditModal()" 
+              class="text-gray-400 hover:text-gray-600 p-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Contenido del componente -->
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <project-edit-component
+        [planId]="selectedPlanForEdit.id"
+        [projectId]="selectedProject.id"
+        (saved)="onResourcesSaved()"
+        (canceled)="closeResourceEditModal()">
+      </project-edit-component>
+    </div>
+  
+  </div>
 </div>
