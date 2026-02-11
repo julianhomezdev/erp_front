@@ -13,7 +13,7 @@ export class ProjectService {
   constructor(private http: HttpClient) {}
 
   getAllProjects(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+    return this.http.get<any[]>(`${this.apiUrl}`);
   }
 
   getProjectById(id: number): Observable<any> {
@@ -22,5 +22,9 @@ export class ProjectService {
 
   deleteProject(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  getProjectWithResourceDetails(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${id}/details`);
   }
 }

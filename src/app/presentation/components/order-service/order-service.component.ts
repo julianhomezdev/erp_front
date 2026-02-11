@@ -1,8 +1,8 @@
 import { CommonModule } from "@angular/common";
 import { Component, inject, OnDestroy, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { OrderService } from "../../../domain/Entities/order-service/order-service.model";
 import { OrderServiceService } from "../../../core/services/order-service..service";
+import { OrderService } from "../../../domain/Entities/orderService/order-service.model";
 
 @Component({
     selector: 'order-service-component',
@@ -40,8 +40,8 @@ export class OrderServiceComponent implements OnInit, OnDestroy {
         
         this.orderServiceService.createNewOds().subscribe({
             next: (ods: OrderService) => {
-                this.successMessage = `Orden de servicio ${ods.odsCode} creada exitosamente`;
-                this.lastOds = ods.odsCode;
+                //this.successMessage = `Orden de servicio ${ods.odsCode} creada exitosamente`;
+                //this.lastOds = ods.odsCode;
                 this.loading = false;
             },
             error: (error) => {
@@ -62,7 +62,7 @@ export class OrderServiceComponent implements OnInit, OnDestroy {
             next: (ods: OrderService) => {
                 
                 console.log(ods);
-                this.lastOds = ods.odsCode;
+                //this.lastOds = ods.odsCode;
                 this.loading = false;
             },
             error: (error) => {

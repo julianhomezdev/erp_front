@@ -23,11 +23,112 @@ export class ProjectDashboardComponent implements OnInit {
   selectedProject: any = null;
   filterStartDate: string = '';
   filterEndDate: string = '';
+
+  showResourceEditModal = false;
+  selectedPlanForEdit: any = null;
   
   ngOnInit(): void {
     this.loadProjects();
   }
+
+  editResources(planId: number): void {
+    const plan = this.findPlanById(planId);
+    if (plan) {
+      this.selectedPlanForEdit = plan;
+      this.showResourceEditModal = true;
+    }
+  }
+
+  assignDetailedResources(planId: number): void {
+    const plan = this.findPlanById(planId);
+    if (plan) {
+      this.selectedPlanForEdit = {
+        ...plan,
+        resourceMode: 'DETAILED' 
+      };
+      this.showResourceEditModal = true;
+    }
+  }
   
+  
+  isQuantityMode(plan: any): boolean {
+    return plan.resourceAssignmentMode?.toUpperCase() === 'QUANTITY';
+  }
+
+  isDetailedMode(plan: any): boolean {
+    return plan.resourceAssignmentMode?.toUpperCase() === 'DETAILED';
+  }
+  
+  findPlanById(planId: number): any {
+    if (!this.selectedProject?.serviceOrders) return null;
+    
+    for (const ods of this.selectedProject.serviceOrders) {
+      for (const plan of ods.samplingPlans) {
+        if (plan.id === planId) {
+          return plan;
+        }
+      }
+    }
+    return null;
+  }
+  
+  
+  navigateToAssignResources(planId: number, projectId: number): void {
+    // Encontrar el índice de la ODS que contiene este plan
+    let odsIndex = -1;
+    
+    if (this.selectedProject?.serviceOrders) {
+      for (let i = 0; i < this.selectedProject.serviceOrders.length; i++) {
+        const ods = this.selectedProject.serviceOrders[i];
+        if (ods.samplingPlans?.some((p: any) => p.id === planId)) {
+          odsIndex = i;
+          break;
+        }
+      }
+    }
+    
+    // Navegar al wizard con parámetros
+    this.router.navigate(['/planner'], {
+      queryParams: {
+        mode: 'edit-resources',
+        projectId: projectId,
+        planId: planId,
+        odsIndex: odsIndex
+      }
+    });
+  }
+  
+  projectHasPendingResources(project: any): boolean {
+    
+    if (!project.serviceOrders) return false;
+    
+    return project.serviceOrders.some((ods: any) => 
+      
+      ods.samplingPlans?.some((plan: any) => 
+        
+        this.isQuantityMode(plan)
+        
+      )
+      
+    );
+    
+  }
+  
+  
+
+  closeResourceEditModal(): void {
+    this.showResourceEditModal = false;
+    this.selectedPlanForEdit = null;
+  }
+
+  onResourcesSaved(): void {
+    this.closeResourceEditModal();
+    // Recargar los detalles del proyecto
+    if (this.selectedProject?.id) {
+      this.viewProject(this.selectedProject.id);
+    }
+  }
+
   loadProjects(): void {
     this.projectService.getAllProjects().subscribe({
       next: (data) => {
@@ -298,5 +399,71 @@ export class ProjectDashboardComponent implements OnInit {
 
   getVehiclePlates(vehicles: any[]): string {
     return vehicles.map(v => v.plateNumber).join(', ');
+  }
+  
+  private findAndNavigatePendingPlan(projectId: number, serviceOrders: any[]):void {
+    
+    for ( let odsIndex = 0; odsIndex < serviceOrders.length; odsIndex++) {
+      
+      const pendingPlan = serviceOrders[odsIndex].samplingPlans?.find(
+        
+        (p: any) => this.isQuantityMode(p)
+        
+      );
+      
+      if(pendingPlan) {
+        
+        this.router.navigate(['/planner'], {
+          
+          queryParams: {
+            
+            mode: 'edit-resources',
+            
+            projectId,
+            
+            planId: pendingPlan.id,
+            
+            odsIndex
+            
+          }
+          
+          
+        });
+        
+        return;
+        
+      }
+      
+      
+    }
+    
+  }
+  
+  
+  // Method to go to assign the detail resources
+  navigateToAssignFromCard(project: any, event: Event) {
+    
+    event.stopPropagation();
+    
+    if (project.serviceOrders?.length) {
+      
+      this.findAndNavigatePendingPlan(project.id, project.serviceOrders); 
+      
+      
+    } else {
+      
+      this.projectService.getProjectById(project.id).subscribe({
+        
+        next:(fullProject) =>
+          
+          this.findAndNavigatePendingPlan(project.id, fullProject.serviceOrders),
+          
+        error: (err) => console.error('Error cargando el proyecto', err)
+        
+        
+      });
+      
+    }
+    
   }
 }

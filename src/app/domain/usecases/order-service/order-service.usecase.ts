@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { OrderService } from "../../Entities/order-service/order-service.model";
 import { OrderServiceRepository } from "../../repositories/order-service/order-service.repository";
+import { OrderService } from "../../Entities/orderService/order-service.model";
 
 @Injectable({
     

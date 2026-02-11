@@ -1,6 +1,6 @@
 
 import { Observable } from "rxjs";
-import { OrderService } from "../../Entities/order-service/order-service.model";
+import { OrderService } from "../../Entities/orderService/order-service.model";
 
 
 

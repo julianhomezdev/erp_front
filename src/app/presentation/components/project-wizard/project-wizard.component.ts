@@ -12,7 +12,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, Subscription } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
 
-// Servicios
 import { EmployeeService } from '../../../core/services/employee.service';
 import { EquipmentService } from '../../../core/services/equipment.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
@@ -20,11 +19,9 @@ import { ClientService } from '../../../core/services/client.service';
 import { ProjectCoordinatorService } from '../../../core/services/project-coordinator.service';
 import { MatrixService } from '../../../core/services/matrix.service';
 import { ProjectCreationService } from '../../../core/services/project-creation.service';
-// Asumiendo que existe este servicio
 import { ProjectDraftService } from '../../../core/services/project-draft.service';
 
 
-// Modelos
 import { Employee } from '../../../domain/Entities/employee/employee.model';
 import { Vehicle } from '../../../domain/Entities/vehicle/vehicle.model';
 import { Equipment } from '../../../domain/Entities/Equipment/equipment.model';
@@ -32,6 +29,10 @@ import { Client } from '../../../domain/Entities/client/client.model';
 import { Coordinator } from '../../../domain/Entities/coordinator/coordinator.model';
 import { Matrix } from '../../../domain/Entities/matrix/matrix.model';
 import { CreateProject } from '../../../domain/Entities/project/project-creation.model';
+import { OrderServiceService } from '../../../core/services/order-service..service';
+import { ReusableOds, ReusableOdsSummary } from '../../../domain/Entities/orderService/reusable-ods-summary.model';
+import { ResourceAssignmentMode } from '../../../domain/enums/resource-assignment-mode.enum';
+import { ProjectService } from '../../../core/services/project.service';
 
 enum ViewMode {
   CONTRACT = 'contract',
@@ -45,6 +46,11 @@ enum BudgetCategory {
   SUBCONTRACTING = 'SUBCONTRATACIÓN',
   RIVER_TRANSPORT = 'TRANSPORTE FLUVIAL',
   REPORTS = 'INFORMES'
+}
+
+interface ResourceQuantity {
+  categoryName: string;
+  quantity: number;
 }
 
 interface BudgetItem {
@@ -68,7 +74,6 @@ interface BudgetItem {
 })
 export class ProjectWizardComponent implements OnInit, OnDestroy {
 
-  // Inyección de servicios
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private employeeService = inject(EmployeeService);
@@ -78,45 +83,55 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   private coordinatorService = inject(ProjectCoordinatorService);
   private matrixService = inject(MatrixService);
   private projectCreationService = inject(ProjectCreationService);
+  private projectService = inject(ProjectService);
   private draftService = inject(ProjectDraftService);
   private route = inject(ActivatedRoute);
+  private odsService = inject(OrderServiceService);
 
-
-  // Enums para el template
   ViewMode = ViewMode;
   BudgetCategory = BudgetCategory;
+  ResourceAssignmentMode = ResourceAssignmentMode;
+  Math = Math;
 
-  // Estado de la vista
+  editingPlanId: number | null = null;
+
+  currentResourceMode: ResourceAssignmentMode = ResourceAssignmentMode.QUANTITY;
+
+  employeeCategories: string[] = [];
+  equipmentCategories: string[] = [];
+
+  employeeQuantities: ResourceQuantity[] = [];
+  equipmentQuantities: ResourceQuantity[] = [];
+  vehicleQuantity: number = 0;
+
+  projectChCode: string = '';
+
   currentView: ViewMode = ViewMode.CONTRACT;
   currentOdsIndex: number = -1;
   currentPlanIndex: number = -1;
 
-  // Estado del draft
   draftId: number | null = null;
   isDraft: boolean = true;
   lastSaved: Date | null = null;
   autoSaving: boolean = false;
 
-  // Formularios
   contractForm!: FormGroup;
   odsForm!: FormGroup;
   planForm!: FormGroup;
   coordinatorForm!: FormGroup;
   budgetItemForm!: FormGroup;
 
-  // Datos del proyecto
   serviceOrders: any[] = [];
   assignedCoordinators: any[] = [];
 
-  // Catálogos
   clients: Client[] = [];
   employees: Employee[] = [];
   equipment: Equipment[] = [];
   vehicles: Vehicle[] = [];
   matrices: Matrix[] = [];
   coordinators: Coordinator[] = [];
+  reusableOdsList: ReusableOdsSummary[] = [];
 
-  // UI State
   loading: boolean = false;
   dataReady: boolean = false;
   errorMessage: string = '';
@@ -124,7 +139,10 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   showFinalDashboard: boolean = false;
   projectResult: number | null = null;
 
-  // Modales
+  odsCreationMode: 'new' | 'reuse' = 'new';
+  selectedReusableOdsCode: string | null = null;
+  loadingReusableOds: boolean = false;
+
   showBudgetItemModal: boolean = false;
   editingBudgetItemIndex: number = -1;
 
@@ -133,7 +151,25 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   availableVehicles: any[] = [];
   resourceDatesSet: boolean = false;
 
-  // Auto-guardado
+  employeeSearchTerm: string = '';
+  equipmentSearchTerm: string = '';
+  vehicleSearchTerm: string = '';
+
+  employeeCategoryFilter: string = '';
+  equipmentCategoryFilter: string = '';
+  vehicleLocationFilter: string = '';
+  
+  
+  projectResourceMode: number = 0;
+
+  planRequiredResources: {
+
+    employeeQuantities: { categoryName: string; quantity: number }[];
+    equipmentQuantities: { categoryName: string; quantity: number }[];
+    vehicleQuantity: number;
+
+  } | null = null;
+
   private destroy$ = new Subject<void>();
   private autoSaveSubscription?: Subscription;
   private formChanges$ = new Subject<void>();
@@ -143,7 +179,227 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.loadCatalogs();
     this.setupAutoSave();
     this.checkForDraftToLoad();
+    this.route.queryParams.subscribe(params => {
+      const mode = params['mode'];
+      const projectId = params['projectId'];
+      const planId = params['planId'];
+      const odsIndex = params['odsIndex'];
+
+      if (mode === 'edit-resources' && projectId && planId && odsIndex !== undefined) {
+        this.loadProjectForResourceEdit(+projectId, +planId, +odsIndex);
+      } else {
+        this.checkForDraftToLoad();
+      }
+    });
+
   }
+
+  get filteredEmployees() {
+    return this.availableEmployees.filter(emp => {
+      let matches = true;
+
+      // Filtro por búsqueda (nombre, cédula)
+      if (this.employeeSearchTerm) {
+        const term = this.employeeSearchTerm.toLowerCase();
+        matches = matches && (
+          emp.name?.toLowerCase().includes(term) ||
+          emp.idCard?.toLowerCase().includes(term) ||
+          emp.position?.toLowerCase().includes(term)
+        );
+      }
+
+      // Filtro por categoría (posición)
+      if (this.employeeCategoryFilter) {
+        matches = matches && emp.position === this.employeeCategoryFilter;
+      }
+
+      return matches;
+    });
+  }
+
+  get filteredEquipment() {
+    return this.availableEquipment.filter(eq => {
+      let matches = true;
+
+      if (this.equipmentSearchTerm) {
+        const term = this.equipmentSearchTerm.toLowerCase();
+        matches = matches && (
+          eq.name?.toLowerCase().includes(term) ||
+          eq.code?.toLowerCase().includes(term) ||
+          eq.serialNumber?.toLowerCase().includes(term)
+        );
+      }
+
+      if (this.equipmentCategoryFilter) {
+        matches = matches && eq.name === this.equipmentCategoryFilter;
+      }
+
+      return matches;
+    });
+  }
+
+  get filteredVehicles() {
+    return this.availableVehicles.filter(v => {
+      let matches = true;
+
+      if (this.vehicleSearchTerm) {
+        const term = this.vehicleSearchTerm.toLowerCase();
+        matches = matches && (
+          v.plateNumber?.toLowerCase().includes(term) ||
+          v.brand?.toLowerCase().includes(term) ||
+          v.model?.toLowerCase().includes(term)
+        );
+      }
+
+      if (this.vehicleLocationFilter) {
+        matches = matches && v.location === this.vehicleLocationFilter;
+      }
+
+      return matches;
+    });
+  }
+
+  get uniqueEmployeeCategories(): string[] {
+    return [...new Set(this.employees.map(e => e.position).filter(Boolean))];
+  }
+
+  get uniqueEquipmentCategories(): string[] {
+    return [...new Set(this.equipment.map(e => e.name).filter(Boolean))];
+  }
+
+  get uniqueVehicleLocations(): string[] {
+    return [...new Set(this.vehicles.map(v => v.location).filter(Boolean))];
+  }
+
+
+
+
+  private loadProjectForResourceEdit(projectId: number, planId: number, odsIndex: number): void {
+
+    this.loading = true;
+
+    this.projectService.getProjectById(projectId).subscribe({
+
+      next: (project) => {
+
+        this.contractForm.patchValue({
+          contractCode: project.contract?.contractCode,
+          contractName: project.contract?.contractName,
+          clientId: project.clientId,
+          startDate: project.initialDate,
+          endDate: project.finalDate
+        });
+        
+
+
+        this.serviceOrders = project.serviceOrders.map((ods: any) => ({
+          odsCode: ods.odsCode,
+          odsName: ods.odsName,
+          odsValue: 0,
+
+          startDate: ods.startDate,
+          endDate: ods.endDate,
+          samplingPlans: ods.samplingPlans || [] 
+          
+        }));
+        
+
+        this.projectResourceMode = project.projectResourceAssignementMode;
+
+        this.currentOdsIndex = odsIndex;
+
+        // Buscar el plan específico
+        const plan = this.serviceOrders[odsIndex]?.samplingPlans.find((p: any) => p.id === planId);
+
+        if (plan) {
+          this.loadPlanForEditing(plan);
+          this.currentView = ViewMode.PLAN_FORM;
+        }
+
+        this.isDraft = false;
+        this.loading = false;
+
+        this.successMessage = 'Proyecto cargado. Complete la asignación de recursos.';
+      
+        
+        setTimeout(() => this.successMessage = '', 4000);
+      },
+      error: (error) => {
+        console.error('Error cargando proyecto:', error);
+        this.errorMessage = 'Error al cargar el proyecto';
+        this.loading = false;
+      }
+    });
+  }
+
+
+  private loadPlanForEditing(plan: any): void {
+    this.currentResourceMode = ResourceAssignmentMode.DETAILED;
+
+
+
+    if (plan.employeeQuantities?.length > 0 ||
+      plan.equipmentQuantities?.length > 0 ||
+      plan.vehicleQuantity > 0) {
+
+      this.planRequiredResources = {
+        employeeQuantities: plan.employeeQuantities || [],
+        equipmentQuantities: plan.equipmentQuantities || [],
+        vehicleQuantity: plan.vehicleQuantity || 0
+      };
+
+      console.log(' RECURSOS REQUERIDOS CARGADOS:', this.planRequiredResources);
+    } else {
+      this.planRequiredResources = null;
+    }
+
+    this.planForm.patchValue({
+      planCode: plan.planCode,
+      planName: plan.planName,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      selectedMatrixIds: plan.sites?.map((s: any) => s.matrixId) || [],
+      hasReport: plan.sites?.[0]?.hasReport || false,
+      hasGDB: plan.sites?.[0]?.hasGDB || false,
+      coordinatorId: plan.projectCoordinatorId || plan.coordinatorId,
+      totalSites: plan.sites?.length || 1,
+      resourceStartDate: plan.resourceStartDate,
+      resourceEndDate: plan.resourceEndDate,
+      resourceAssignmentMode: ResourceAssignmentMode.DETAILED,
+      budgetItems: plan.budget?.items || []
+    });
+
+    this.sitesArray.clear();
+    if (plan.sites && plan.sites.length > 0) {
+      plan.sites.forEach((site: any) => {
+        const siteGroup = this.fb.group({
+          name: [site.name],
+          matrixId: [site.matrixId],
+          isSubcontracted: [false],
+          subcontractorName: [''],
+          executionDate: [site.executionDate],
+          hasReport: [site.hasReport],
+          hasGDB: [site.hasGDB]
+        });
+        this.sitesArray.push(siteGroup);
+      });
+    }
+
+    if (plan.resources) {
+      this.planForm.patchValue({
+        selectedEmployeeIds: plan.resources.employeeIds || [],
+        selectedEquipmentIds: plan.resources.equipmentIds || [],
+        selectedVehicleIds: plan.resources.vehicleIds || []
+      });
+    }
+
+    if (plan.resourceStartDate && plan.resourceEndDate) {
+      this.loadAvailableResources();
+    }
+
+    this.editingPlanId = plan.id;
+  }
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -153,11 +409,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Inicializa todos los formularios
-   */
   initializeForms(): void {
-    // Formulario de contrato
     this.contractForm = this.fb.group({
       contractCode: ['', Validators.required],
       contractName: [''],
@@ -166,39 +418,40 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       endDate: ['']
     });
 
-    // Formulario de ODS
     this.odsForm = this.fb.group({
       odsCode: ['', Validators.required],
       odsName: [''],
+      odsValue: [0, [Validators.required, Validators.min(0)]],
       startDate: [''],
       endDate: ['']
     });
 
-    // Formulario de plan de muestreo
     this.planForm = this.fb.group({
-      planCode: [''],
+      planCode: ['', Validators.required],
+      planName: ['', Validators.required],
       startDate: [''],
       endDate: [''],
-      
       totalSites: [1, [Validators.required, Validators.min(1)]],
-      
+      selectedMatrixIds: [[], Validators.required],
+      matrixId: [''],
+      hasReport: [false],
+      hasGDB: [false],
+      coordinatorId: ['', Validators.required],
       sites: this.fb.array([]),
+      resourceAssignmentMode: [ResourceAssignmentMode.QUANTITY],
+      employeeQuantities: [[]],
+      equipmentQuantities: [[]],
+      vehicleQuantity: [0],
       resourceStartDate: [''],
       resourceEndDate: [''],
-      selectedEmployeeIds: [[], Validators.required],
+      selectedEmployeeIds: [[]],
       selectedEquipmentIds: [[]],
       selectedVehicleIds: [[]],
       budgetItems: [[]],
-      chCode: [''],
       notes: ['']
     });
 
-    // Formulario de coordinadores
-    this.coordinatorForm = this.fb.group({
-      coordinatorId: [null, Validators.required]
-    });
 
-    // Formulario de ítem de presupuesto
     this.budgetItemForm = this.fb.group({
       category: [BudgetCategory.TRANSPORT, Validators.required],
       concept: ['', Validators.required],
@@ -210,10 +463,8 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       notes: ['']
     });
 
-    // Agregar un sitio inicial
     this.addSite();
 
-    // Suscribirse a cambios para auto-guardado
     this.contractForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.formChanges$.next());
@@ -237,6 +488,120 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       });
   }
 
+  toggleMatrixSelection(matrixId: number): void {
+    const current = this.planForm.value.selectedMatrixIds || [];
+    const index = current.indexOf(matrixId)
+    if (index === -1) {
+      this.planForm.patchValue({
+        selectedMatrixIds: [...current, matrixId]
+      });
+    } else {
+      current.splice(index, 1);
+      this.planForm.patchValue({
+        selectedMatrixIds: [...current]
+      });
+    }
+    this.formChanges$.next();
+  }
+
+  isMatrixSelected(matrixId: number): boolean {
+    return (this.planForm.value.selectedMatrixIds || []).includes(matrixId);
+  }
+
+  setOdsCreationMode(mode: 'new' | 'reuse'): void {
+    this.odsCreationMode = mode;
+    this.selectedReusableOdsCode = null;
+    if (mode === 'new') {
+      this.odsForm.reset();
+    }
+  }
+
+  addServiceOrderFromReusable(): void {
+    if (!this.odsForm.valid || !this.selectedReusableOdsCode) {
+      this.errorMessage = 'Complete el código de la ODS y seleccione una configuración';
+      return;
+    }
+
+    this.loadingReusableOds = true;
+
+    this.odsService.getReusableOds(this.selectedReusableOdsCode).subscribe({
+      next: (reusableOds: ReusableOds) => {
+        const ods = {
+          odsCode: this.odsForm.value.odsCode,
+          odsName: this.odsForm.value.odsName || reusableOds.odsName || this.odsForm.value.odsCode,
+          odsValue: this.odsForm.value.odsValue || 0,
+          startDate: this.odsForm.value.startDate,
+          endDate: this.odsForm.value.endDate,
+          samplingPlans: this.mapReusablePlansToCurrentProject(reusableOds.samplingPlans || [])
+        };
+
+        this.serviceOrders.push(ods);
+        this.odsForm.reset();
+        this.selectedReusableOdsCode = null;
+        this.odsCreationMode = 'new';
+        this.errorMessage = '';
+        this.successMessage = `ODS "${ods.odsCode}" agregada con ${ods.samplingPlans.length} planes precargados`;
+        setTimeout(() => this.successMessage = '', 5000);
+        this.formChanges$.next();
+        this.loadingReusableOds = false;
+      },
+      error: (error) => {
+        console.error('Error loading reusable ODS:', error);
+        this.errorMessage = 'Error al cargar la configuración de ODS reutilizable';
+        this.loadingReusableOds = false;
+      }
+    });
+  }
+
+  private mapReusablePlansToCurrentProject(reusablePlans: any[]): any[] {
+    return reusablePlans.map(plan => ({
+      planCode: plan.planCode || '',
+      startDate: null,
+      endDate: null,
+      sites: (plan.sites || []).map((site: any) => ({
+        name: site.name || '',
+        matrixId: site.matrixId,
+        matrixName: site.matrixName || '',
+        isSubcontracted: site.isSubcontracted || false,
+        subcontractorName: site.subcontractorName || null,
+        executionDate: null,
+        hasReport: site.hasReport || false,
+        hasGDB: site.hasGDB || false
+      })),
+      resources: {
+        startDate: null,
+        endDate: null,
+        employeeIds: [],
+        equipmentIds: [],
+        vehicleIds: [],
+        employees: [],
+        equipment: [],
+        vehicles: []
+      },
+      budget: {
+        chCode: plan.budget?.chCode || '',
+        items: (plan.budget?.items || []).map((item: any) => ({
+          id: this.generateId(),
+          category: item.category,
+          concept: item.concept,
+          provider: item.provider || '',
+          quantity: item.quantity,
+          unit: item.unit,
+          costPerUnit: item.costPerUnit,
+          billedPerUnit: item.billedPerUnit,
+          notes: item.notes || ''
+        })),
+        summary: null,
+        notes: plan.budget?.notes || ''
+      }
+    }));
+  }
+
+  getReusableOdsName(code: string): string {
+    const ods = this.reusableOdsList.find(o => o.odsCode === code);
+    return ods?.odsName || 'ODS';
+  }
+
   updateVehicleBudgetDays(): void {
     const startDate = this.planForm.value.resourceStartDate;
     const endDate = this.planForm.value.resourceEndDate;
@@ -255,98 +620,85 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.planForm.patchValue({ budgetItems: currentItems });
   }
 
-
   loadAvailableResources(): void {
-  const startDate = this.planForm.value.resourceStartDate;
-  const endDate = this.planForm.value.resourceEndDate;
+    const startDate = this.planForm.value.resourceStartDate;
+    const endDate = this.planForm.value.resourceEndDate;
 
-  if (!startDate || !endDate) {
-    this.availableEmployees = this.employees.map(e => ({ ...e, isAvailable: false }));
-    this.availableEquipment = this.equipment.map(e => ({ ...e, isAvailable: false }));
-    this.availableVehicles = this.vehicles.map(v => ({ ...v, isAvailable: false }));
-    this.resourceDatesSet = false;
-    return;
+    if (!startDate || !endDate) {
+      this.availableEmployees = this.employees.map(e => ({ ...e, isAvailable: false }));
+      this.availableEquipment = this.equipment.map(e => ({ ...e, isAvailable: false }));
+      this.availableVehicles = this.vehicles.map(v => ({ ...v, isAvailable: false }));
+      this.resourceDatesSet = false;
+      return;
+    }
+
+    this.resourceDatesSet = true;
+    this.loading = true;
+    this.resourcesLoadedCount = 0;
+
+    this.employeeService.getAvailableEmployees(startDate, endDate).subscribe({
+      next: (employees) => {
+        this.availableEmployees = this.employees.map(emp => {
+          const availableEmp = employees?.find(e => e.id === emp.id);
+          return {
+            ...emp,
+            isAvailable: availableEmp ? availableEmp.isAvailable : false
+          };
+        });
+        this.checkAllResourcesLoaded();
+      },
+      error: (error) => {
+        console.error('ERROR loading employees:', error);
+        this.availableEmployees = this.employees.map(e => ({ ...e, isAvailable: false }));
+        this.checkAllResourcesLoaded();
+      }
+    });
+
+    this.equipmentService.getAvailableEquipment(startDate, endDate).subscribe({
+      next: (equipment) => {
+        this.availableEquipment = this.equipment.map(eq => {
+          const availableEq = equipment?.find(e => e.id === eq.id);
+          return {
+            ...eq,
+            isAvailable: availableEq ? availableEq.isAvailable : false
+          };
+        });
+        this.checkAllResourcesLoaded();
+      },
+      error: (error) => {
+        console.error('ERROR loading equipment:', error);
+        this.availableEquipment = this.equipment.map(e => ({ ...e, isAvailable: false }));
+        this.checkAllResourcesLoaded();
+      }
+    });
+
+    this.vehicleService.getAvailableVehicles(startDate, endDate).subscribe({
+      next: (vehicles) => {
+        this.availableVehicles = this.vehicles.map(veh => {
+          const availableVeh = vehicles?.find(v => v.id === veh.id);
+          return {
+            ...veh,
+            isAvailable: availableVeh ? availableVeh.isAvailable : false
+          };
+        });
+        this.checkAllResourcesLoaded();
+      },
+      error: (error) => {
+        console.error('ERROR loading vehicles:', error);
+        this.availableVehicles = this.vehicles.map(v => ({ ...v, isAvailable: false }));
+        this.checkAllResourcesLoaded();
+      }
+    });
   }
 
-  this.resourceDatesSet = true;
-  this.loading = true;
-  
-  this.resourcesLoadedCount = 0;
-
-  this.employeeService.getAvailableEmployees(startDate, endDate).subscribe({
-    next: (employees) => {
-      //FIX: Mantener todos los datos del empleado original
-      this.availableEmployees = this.employees.map(emp => {
-        const availableEmp = employees?.find(e => e.id === emp.id);
-        return {
-          ...emp, 
-          isAvailable: availableEmp ? availableEmp.isAvailable : false
-        };
-      });
-      this.checkAllResourcesLoaded();
-    },
-    error: (error) => {
-      console.error('ERROR loading employees:', error);
-      this.availableEmployees = this.employees.map(e => ({ ...e, isAvailable: false }));
-      this.checkAllResourcesLoaded();
-    }
-  });
-
-  this.equipmentService.getAvailableEquipment(startDate, endDate).subscribe({
-    next: (equipment) => {
-      // FIX: Mantener todos los datos del equipo original
-      this.availableEquipment = this.equipment.map(eq => {
-        const availableEq = equipment?.find(e => e.id === eq.id);
-        return {
-          ...eq, 
-          isAvailable: availableEq ? availableEq.isAvailable : false
-        };
-      });
-      this.checkAllResourcesLoaded();
-    },
-    error: (error) => {
-      console.error('ERROR loading equipment:', error);
-      this.availableEquipment = this.equipment.map(e => ({ ...e, isAvailable: false }));
-      this.checkAllResourcesLoaded();
-    }
-  });
-
-  // Cargar vehículos disponibles
-  this.vehicleService.getAvailableVehicles(startDate, endDate).subscribe({
-    next: (vehicles) => {
-      // FIX: Mantener todos los datos del vehículo original
-      this.availableVehicles = this.vehicles.map(veh => {
-        const availableVeh = vehicles?.find(v => v.id === veh.id);
-        return {
-          ...veh, 
-          isAvailable: availableVeh ? availableVeh.isAvailable : false
-        };
-      });
-      this.checkAllResourcesLoaded();
-    },
-    error: (error) => {
-      console.error('ERROR loading vehicles:', error);
-      this.availableVehicles = this.vehicles.map(v => ({ ...v, isAvailable: false }));
-      this.checkAllResourcesLoaded();
-    }
-  });
-}
-
   private resourcesLoadedCount = 0;
-  
+
   private checkAllResourcesLoaded(): void {
-    
     this.resourcesLoadedCount++;
-    
     if (this.resourcesLoadedCount >= 3) {
-      
       this.loading = false;
-      
       this.resourcesLoadedCount = 0;
-      
-      
     }
-    
   }
 
   calculateDaysBetweenDates(startDate: string, endDate: string): number {
@@ -364,15 +716,10 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
     if (index === -1) {
       this.planForm.patchValue({
-        
         selectedVehicleIds: [...current, vehicleId]
-        
       });
-      
       this.addVehicleToBudget(vehicleId);
-      
     } else {
-      
       current.splice(index, 1);
       this.planForm.patchValue({
         selectedVehicleIds: [...current]
@@ -421,9 +768,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.planForm.patchValue({ budgetItems: filteredItems });
   }
 
-  /**
-   * Carga todos los catálogos necesarios
-   */
   loadCatalogs(): void {
     this.loading = true;
 
@@ -433,36 +777,44 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       this.equipmentService.getAllEquipment().toPromise(),
       this.vehicleService.getAllVehicles().toPromise(),
       this.matrixService.getAllMatrix().toPromise(),
-      this.coordinatorService.getAllCoordinators().toPromise()
-    ]).then(([clients, employees, equipment, vehicles, matrices, coordinators]) => {
+      this.coordinatorService.getAllCoordinators().toPromise(),
+      this.odsService.getReusableOdsList().toPromise()
+    ]).then(([clients, employees, equipment, vehicles, matrices, coordinators, reusableOds]) => {
       this.clients = clients || [];
       this.employees = employees || [];
       this.equipment = equipment || [];
       this.vehicles = vehicles || [];
       this.matrices = matrices || [];
       this.coordinators = coordinators || [];
+      this.reusableOdsList = reusableOds || [];
+
+      this.employeeCategories = [...new Set(this.employees
+        .map(e => e.position)
+        .filter(c => c && c.trim() !== '')
+      )];
+
+      this.equipmentCategories = [...new Set(this.equipment
+        .map(e => e.name)
+        .filter(c => c && c.trim() !== '')
+      )];
+
       this.dataReady = true;
       this.loading = false;
     }).catch(error => {
       console.error('Error cargando catálogos:', error);
-      this.errorMessage = 'Error al cargar los datos necesarios';
+      this.errorMessage = 'Error al cargar los datos necesarios'
       this.loading = false;
     });
   }
 
-  /**
-   * Configura el sistema de auto-guardado
-   */
   setupAutoSave(): void {
-    // Auto-guardar cada 30 segundos cuando hay cambios
     this.formChanges$
       .pipe(
-        debounceTime(30000), // 30 segundos
+        debounceTime(30000),
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
         if (this.isDraft && this.contractForm.valid) {
-          //this.saveDraft(true);
         }
       });
   }
@@ -475,84 +827,70 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       }
     });
   }
-  
+
   generateMultipleSites(): void {
     const count = this.planForm.value.totalSites || 1;
+    const planCode = this.planForm.value.planCode;
+    const planName = this.planForm.value.planName;
     const baseName = this.planForm.value.planName || this.planForm.value.planCode;
     const executionDate = this.planForm.value.startDate || '';
-    
+
+    if (!planCode || !planName) {
+      this.errorMessage = 'Complete el codigo y nombre del plan antes de generar sitios';
+      return;
+    }
+
     this.sitesArray.clear();
-    
-    
+
     for (let i = 0; i < count; i++) {
+      const siteName = `${planCode}-${planName}`;
       const siteGroup = this.fb.group({
-        name: [baseName],  
-        matrixId: ['', Validators.required],
+        name: [siteName],
+        matrixId: [''],
         isSubcontracted: [false],
         subcontractorName: [''],
-        executionDate: [executionDate],  
+        executionDate: [executionDate],
         hasReport: [false],
         hasGDB: [false]
       });
 
       siteGroup.get('isSubcontracted')?.valueChanges
-      
         .pipe(takeUntil(this.destroy$))
-        
-        
         .subscribe(isSubcontracted => {
-          
           const subcontractorControl = siteGroup.get('subcontractorName');
-          
           if (isSubcontracted) {
-            
             subcontractorControl?.setValidators([Validators.required]);
-            
-            
           } else {
-            
             subcontractorControl?.clearValidators();
-            
           }
-          
           subcontractorControl?.updateValueAndValidity();
         });
 
       this.sitesArray.push(siteGroup);
     }
-    
     this.formChanges$.next();
   }
-  
-  
+
   get sitesArray(): FormArray {
     return this.planForm.get('sites') as FormArray;
   }
 
   addSite(): void {
-    
-    const baseName = this.planForm.value.planName || this.planForm.value.planCode;
+    const planCode = this.planForm.value.planCode;
+    const planName = this.planForm.value.planName;
+    const siteName = planCode && planName ? `${planCode}-${planName}` : '';
     const executionDate = this.planForm.value.startDate || '';
-    
+
     const siteGroup = this.fb.group({
-      
-      name: [baseName],
-      
-      matrixId: ['', Validators.required],
-      
+      name: [siteName],
+      matrixId: [''],
       isSubcontracted: [false],
-      
       subcontractorName: [''],
-      
       executionDate: [executionDate],
-      
       hasReport: [false],
-      
       hasGDB: [false]
-      
     });
 
-    // Validación condicional para subcontratación
     siteGroup.get('isSubcontracted')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(isSubcontracted => {
@@ -575,10 +913,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       this.formChanges$.next();
     }
   }
-
-  // ==========================================
-  // GESTIÓN DE RECURSOS
-  // ==========================================
 
   toggleEmployeeSelection(employeeId: number): void {
     const current = this.planForm.value.selectedEmployeeIds || [];
@@ -622,15 +956,9 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     return (this.planForm.value.selectedEquipmentIds || []).includes(equipmentId);
   }
 
-
-
   isVehicleSelected(vehicleId: number): boolean {
     return (this.planForm.value.selectedVehicleIds || []).includes(vehicleId);
   }
-
-  // ==========================================
-  // GESTIÓN DE PRESUPUESTO
-  // ==========================================
 
   get budgetItems(): BudgetItem[] {
     return this.planForm.value.budgetItems || [];
@@ -738,9 +1066,58 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     return summary;
   }
 
-  // ==========================================
-  // GESTIÓN DE ODS
-  // ==========================================
+  getOdsBudgetIncludingCurrent(odsIndex: number): { used: number; available: number; percentage: number } {
+    const ods = this.serviceOrders[odsIndex];
+    if (!ods) return { used: 0, available: 0, percentage: 0 };
+
+    const odsValue = ods.odsValue || 0;
+    let totalUsed = 0;
+
+    if (ods.samplingPlans && ods.samplingPlans.length > 0) {
+      ods.samplingPlans.forEach((plan: any) => {
+        if (plan.budget && plan.budget.items) {
+          plan.budget.items.forEach((item: BudgetItem) => {
+            totalUsed += item.quantity * item.billedPerUnit;
+          });
+        }
+      });
+    }
+
+    if (!this.editingPlanId && 
+        this.currentView === ViewMode.PLAN_FORM && 
+        this.currentOdsIndex === odsIndex) {
+      const currentPlanBudget = this.getCurrentBudgetBilledTotal();
+      totalUsed += currentPlanBudget;
+    }
+
+    const available = odsValue - totalUsed;
+    const percentage = odsValue > 0 ? (totalUsed / odsValue) * 100 : 0;
+
+    return { used: totalUsed, available, percentage };
+  }
+
+  getOdsBudgetSummary(odsIndex: number): { used: number; available: number; percentage: number } {
+    const ods = this.serviceOrders[odsIndex];
+    if (!ods) return { used: 0, available: 0, percentage: 0 };
+
+    const odsValue = ods.odsValue || 0;
+    let totalUsed = 0;
+
+    if (ods.samplingPlans && ods.samplingPlans.length > 0) {
+      ods.samplingPlans.forEach((plan: any) => {
+        if (plan.budget && plan.budget.items) {
+          plan.budget.items.forEach((item: BudgetItem) => {
+            totalUsed += item.quantity * item.billedPerUnit;
+          });
+        }
+      });
+    }
+
+    const available = odsValue - totalUsed;
+    const percentage = odsValue > 0 ? (totalUsed / odsValue) * 100 : 0;
+
+    return { used: totalUsed, available, percentage };
+  }
 
   addServiceOrder(): void {
     if (!this.odsForm.valid) {
@@ -751,6 +1128,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     const ods = {
       odsCode: this.odsForm.value.odsCode,
       odsName: this.odsForm.value.odsName || this.odsForm.value.odsCode,
+      odsValue: this.odsForm.value.odsValue || 0,
       startDate: this.odsForm.value.startDate,
       endDate: this.odsForm.value.endDate,
       samplingPlans: []
@@ -770,98 +1148,171 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   selectOdsForPlans(index: number): void {
     this.currentOdsIndex = index;
     this.currentView = ViewMode.PLAN_FORM;
+
+    const ods = this.serviceOrders[index];
+    this.planForm.patchValue({
+      startDate: ods.startDate || '',
+      endDate: ods.endDate || '',
+      resourceStartDate: ods.startDate || '',
+      resourceEndDate: ods.endDate || ''
+    });
+
+    if (ods.startDate && ods.endDate) {
+      this.loadAvailableResources();
+    }
   }
 
   backToOdsList(): void {
     this.currentView = ViewMode.ODS_LIST;
     this.currentOdsIndex = -1;
+    this.expandedPlanIndex = -1;
     this.resetPlanForm();
   }
 
-  // ==========================================
-  // GESTIÓN DE PLANES DE MUESTREO
-  // ==========================================
-
   addPlanToCurrentOds(): void {
-    
     if (!this.planForm.valid) {
-      
       this.errorMessage = 'Complete los campos requeridos del plan';
-      
       return;
-      
     }
 
     if (this.sitesArray.length === 0) {
-      
       this.errorMessage = 'Agregue al menos un sitio de monitoreo';
-      
       return;
-      
     }
 
-    if (this.planForm.value.selectedEmployeeIds.length === 0) {
-      
-      this.errorMessage = 'Asigne al menos un empleado al plan';
-      
+    if (!this.planForm.value.selectedMatrixIds || this.planForm.value.selectedMatrixIds.length === 0) {
+      this.errorMessage = 'Seleccione al menos una matriz';
       return;
-      
     }
 
-    const sites = this.sitesArray.value.map((site: any, index: number) => {
-      
-      
-    const matrix = this.matrices.find(m => m.id === Number(site.matrixId));
-    
-      
-      return {
-        name: site.name,
-        matrixId: Number(site.matrixId),
-        matrixName: matrix?.matrixName || '',
-        isSubcontracted: site.isSubcontracted,
-        subcontractorName: site.isSubcontracted
-        ? site.subcontractorName?.trim() || null
-        : null,
-        executionDate: site.executionDate,
-        hasReport: site.hasReport,
-        hasGDB: site.hasGDB
-      };
-    });
+    const mode = this.planForm.value.resourceAssignmentMode;
 
-    const selectedEmployees = this.employees.filter(e =>
-      this.planForm.value.selectedEmployeeIds.includes(e.id)
-    );
-    const selectedEquipment = this.equipment.filter(e =>
-      this.planForm.value.selectedEquipmentIds.includes(e.id)
-    );
-    const selectedVehicles = this.vehicles.filter(v =>
-      this.planForm.value.selectedVehicleIds.includes(v.id)
+    if (mode === ResourceAssignmentMode.QUANTITY) {
+      const hasEmployees = this.employeeQuantities.some(eq => eq.categoryName?.trim() && eq.quantity > 0);
+      const hasEquipment = this.equipmentQuantities.some(eq => eq.categoryName?.trim() && eq.quantity > 0);
+      const hasVehicles = this.vehicleQuantity > 0;
+
+      if (!hasEmployees && !hasEquipment && !hasVehicles) {
+        this.errorMessage = 'Agregue al menos un recurso (personal, equipo o vehículo)';
+        return;
+      }
+    } else {
+      if (!this.planForm.value.selectedEmployeeIds || this.planForm.value.selectedEmployeeIds.length === 0) {
+        this.errorMessage = 'Seleccione al menos un empleado';
+        return;
+      }
+    }
+
+    const planBilledTotal = this.budgetItems.reduce((sum, item) => sum + (item.quantity * item.billedPerUnit), 0);
+    const odsBudget = this.getOdsBudgetSummary(this.currentOdsIndex);
+
+    if (planBilledTotal > odsBudget.available) {
+      this.errorMessage = `El presupuesto del plan ($${planBilledTotal.toLocaleString()}) excede el disponible de la ODS ($${odsBudget.available.toLocaleString()})`;
+      return;
+    }
+
+    const selectedMatrices = this.matrices.filter(m =>
+      this.planForm.value.selectedMatrixIds.includes(m.id)
     );
 
-    const plan = {
+    if (this.editingPlanId) {
+      this.updateExistingPlan();
+      return;
+    }
+
+    const coordinator = this.coordinators.find(c => c.id === Number(this.planForm.value.coordinatorId));
+
+    const sites = this.sitesArray.value.map((site: any) => ({
+      name: site.name,
+      matrixIds: this.planForm.value.selectedMatrixIds,
+      matrixNames: selectedMatrices.map(m => m.matrixName).join(', '),
+      isSubcontracted: site.isSubcontracted,
+      subcontractorName: site.isSubcontracted ? (site.subcontractorName?.trim() || null) : null,
+      executionDate: site.executionDate || null,
+      hasReport: this.planForm.value.hasReport,
+      hasGDB: this.planForm.value.hasGDB
+    }));
+
+
+    const validEmployeeQtys = this.employeeQuantities.filter(eq =>
+      eq.categoryName?.trim() && eq.quantity > 0
+    );
+
+    const validEquipmentQtys = this.equipmentQuantities.filter(eq =>
+      eq.categoryName?.trim() && eq.quantity > 0
+    );
+
+    const planData: any = {
       planCode: this.planForm.value.planCode,
+      planName: this.planForm.value.planName,
       startDate: this.planForm.value.startDate,
       endDate: this.planForm.value.endDate,
+      matrixIds: this.planForm.value.selectedMatrixIds,
+      matrixNames: selectedMatrices.map(m => m.matrixName).join(', '),
+      coordinatorId: Number(this.planForm.value.coordinatorId),
+      coordinatorName: coordinator?.name || '',
+      hasReport: this.planForm.value.hasReport,
+      hasGDB: this.planForm.value.hasGDB,
       sites: sites,
-      resources: {
-        startDate: this.planForm.value.resourceStartDate,
-        endDate: this.planForm.value.resourceEndDate,
-        employeeIds: this.planForm.value.selectedEmployeeIds,
-        equipmentIds: this.planForm.value.selectedEquipmentIds,
-        vehicleIds: this.planForm.value.selectedVehicleIds,
-        employees: selectedEmployees,
-        equipment: selectedEquipment,
-        vehicles: selectedVehicles
-      },
       budget: {
-        chCode: this.planForm.value.chCode,
+        chCode: this.planForm.value.chCode || this.projectChCode,
         items: this.budgetItems,
         summary: this.planBudgetSummary,
         notes: this.planForm.value.notes
       }
     };
 
-    this.serviceOrders[this.currentOdsIndex].samplingPlans.push(plan);
+    if (mode === ResourceAssignmentMode.QUANTITY) {
+      planData.resourceAssignmentMode = 'quantity';
+      planData.employeeQuantities = validEmployeeQtys;
+      planData.equipmentQuantities = validEquipmentQtys;
+      planData.vehicleQuantity = this.vehicleQuantity || 0;
+      planData.resourceStartDate = this.planForm.value.resourceStartDate;
+      planData.resourceEndDate = this.planForm.value.resourceEndDate;
+      planData.resources = null; // Importante: null para modo quantity
+    } else {
+      const selectedEmployees = this.employees.filter(e =>
+        this.planForm.value.selectedEmployeeIds.includes(e.id)
+      );
+      const selectedEquipment = this.equipment.filter(e =>
+        this.planForm.value.selectedEquipmentIds.includes(e.id)
+      );
+      const selectedVehicles = this.vehicles.filter(v =>
+        this.planForm.value.selectedVehicleIds.includes(v.id)
+      );
+
+      planData.resourceAssignmentMode = 'detailed';
+      planData.employeeQuantities = [];
+      planData.equipmentQuantities = [];
+      planData.vehicleQuantity = 0;
+      planData.resourceStartDate = this.planForm.value.resourceStartDate;
+      planData.resourceEndDate = this.planForm.value.resourceEndDate;
+
+      planData.resources = {
+        mode: 'DETAILED',
+        startDate: this.planForm.value.resourceStartDate,
+        endDate: this.planForm.value.resourceEndDate,
+        employeeIds: this.planForm.value.selectedEmployeeIds || [],
+        equipmentIds: this.planForm.value.selectedEquipmentIds || [],
+        vehicleIds: this.planForm.value.selectedVehicleIds || [],
+        employees: selectedEmployees,
+        equipment: selectedEquipment,
+        vehicles: selectedVehicles,
+        employeeQuantities: [],
+        equipmentQuantities: [],
+        vehicleQuantity: 0
+      };
+    }
+
+    this.serviceOrders[this.currentOdsIndex].samplingPlans.push(planData);
+
+    console.log('✅ PLAN GUARDADO CON CANTIDADES:', {
+      mode: planData.resourceAssignmentMode,
+      employeeQtys: planData.employeeQuantities,
+      equipmentQtys: planData.equipmentQuantities,
+      vehicleQty: planData.vehicleQuantity
+    });
+
     this.resetPlanForm();
     this.errorMessage = '';
     this.successMessage = 'Plan agregado exitosamente';
@@ -869,27 +1320,151 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.formChanges$.next();
   }
 
+  expandedPlanIndex: number = -1;
+
+  togglePlanDetails(index: number): void {
+    this.expandedPlanIndex = this.expandedPlanIndex === index ? -1 : index;
+  }
+
   removePlanFromOds(odsIndex: number, planIndex: number): void {
     this.serviceOrders[odsIndex].samplingPlans.splice(planIndex, 1);
     this.formChanges$.next();
   }
 
+  private updateExistingPlan(): void {
+    
+    const resourcesData = {
+      
+      mode: ResourceAssignmentMode.DETAILED,
+      startDate: this.planForm.value.resourceStartDate,
+      endDate: this.planForm.value.resourceEndDate,
+      employeeIds: this.planForm.value.selectedEmployeeIds || [],
+      equipmentIds: this.planForm.value.selectedEquipmentIds || [],
+      vehicleIds: this.planForm.value.selectedVehicleIds || [],
+      employeeQuantities: [],
+      equipmentQuantities: [],
+      vehicleQuantity: 0
+      
+    };
+
+    this.loading = true;
+
+    this.projectCreationService.updatePlanResources(this.editingPlanId!, resourcesData).subscribe({
+      next: (response) => {
+        
+        if(this.serviceOrders[this.currentOdsIndex]?.samplingPlans) {
+          
+          const plan = this.serviceOrders[this.currentOdsIndex].samplingPlans
+            .find((p: any) => p.id === this.editingPlanId);
+            
+          if (plan) {
+              
+            plan.resourceAssignmentMode = 'DETAILED';
+            plan.resources = {
+              mode: 'DETAILED',
+              startDate: resourcesData.startDate,
+              endDate: resourcesData.endDate,
+              employeeIds: resourcesData.employeeIds,
+              equipmentIds: resourcesData.equipmentIds,
+              vehicleIds: resourcesData.vehicleIds,
+              employees: this.employees.filter(e => resourcesData.employeeIds.includes(e.id)),
+              equipment: this.equipment.filter(e => resourcesData.equipmentIds.includes(e.id)),
+              vehicles: this.vehicles.filter(v => resourcesData.vehicleIds.includes(v.id))
+              
+          }
+          
+        }
+      
+      }
+        
+        this.successMessage = 'Recursos asignados exitosamente';
+        this.loading = false;
+
+        setTimeout(() => {
+          
+          this.router.navigate(['/projects-dashboard']);
+          
+        }, 2000);
+        
+      },
+      error: (error) => {
+        
+        console.error('Error actualizando recursos:', error);
+        
+        this.errorMessage = 'Error al actualizar los recursos';
+        
+        this.loading = false;
+        
+      }
+      
+    });
+    
+}
+
   resetPlanForm(): void {
+
+    this.planRequiredResources = null;
+
+    const odsStartDate = this.currentOdsIndex !== -1
+      ? this.serviceOrders[this.currentOdsIndex].startDate
+      : '';
+    const odsEndDate = this.currentOdsIndex !== -1
+      ? this.serviceOrders[this.currentOdsIndex].endDate
+      : '';
+
     this.planForm.reset({
+      startDate: odsStartDate,
+      endDate: odsEndDate,
+      resourceStartDate: odsStartDate,
+      resourceEndDate: odsEndDate,
+      resourceAssignmentMode: ResourceAssignmentMode.QUANTITY,
+      employeeQuantities: [],
+      equipmentQuantities: [],
+      vehicleQuantity: 0,
       selectedEmployeeIds: [],
       selectedEquipmentIds: [],
       selectedVehicleIds: [],
       budgetItems: []
     });
+
+    this.currentResourceMode = ResourceAssignmentMode.QUANTITY;
+    this.employeeQuantities = [];
+    this.equipmentQuantities = [];
+    this.vehicleQuantity = 0;
+
     this.sitesArray.clear();
     this.addSite();
   }
 
+
   getPlanBudgetTotal(plan: any): number {
-    if (!plan.budget || !plan.budget.summary) return 0;
-    return plan.budget.summary.grandTotal.billed || 0;
+    if (!plan.budget || !plan.budget.items) return 0;
+    return plan.budget.items.reduce((sum: number, item: BudgetItem) => sum + (item.quantity * item.billedPerUnit), 0);
   }
 
+
+  getPlanBilledTotal(plan: any): number {
+    if (!plan.budgetItems) return 0;
+    return plan.budgetItems.reduce((sum: number, item: BudgetItem) =>
+      sum + (item.quantity * item.billedPerUnit), 0
+    );
+  }
+
+  getCurrentBudgetCostTotal(): number {
+    return this.budgetItems.reduce((sum, item) =>
+      sum + (item.quantity * item.costPerUnit), 0
+    );
+  }
+
+  getCurrentBudgetBilledTotal(): number {
+    return this.budgetItems.reduce((sum, item) =>
+      sum + (item.quantity * item.billedPerUnit), 0
+    );
+  }
+
+  getCurrentBudgetProfit(): number {
+    return this.getCurrentBudgetBilledTotal() - this.getCurrentBudgetCostTotal();
+  }
 
   addCoordinator(): void {
     if (!this.coordinatorForm.valid) {
@@ -921,7 +1496,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.assignedCoordinators.splice(index, 1);
     this.formChanges$.next();
   }
-
 
   saveDraft(isAutoSave: boolean = false): void {
     if (!this.contractForm.valid) {
@@ -973,7 +1547,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('ERROR COMPLETO:', error);
         console.error('ERROR MESSAGE:', error.error);
-        console.error('ERRORES DE VALIDACIÓN:', error.error?.errors); // AGREGA ESTA LÍNEA
+        console.error('ERRORES DE VALIDACIÓN:', error.error?.errors);
         if (!isAutoSave) {
           this.errorMessage = 'Error al guardar el borrador';
         }
@@ -982,6 +1556,7 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       }
     });
   }
+
   loadDraft(draftId: number): void {
     this.loading = true;
 
@@ -1002,7 +1577,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   }
 
   deleteDraft(): void {
-    
     if (!this.draftId) return;
 
     if (!confirm('¿Está seguro de eliminar este borrador?')) {
@@ -1022,8 +1596,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-
 
   private restoreDraftData(draft: any): void {
     const contract = draft.contract || draft.Contract;
@@ -1047,11 +1619,10 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     }
   }
 
-
   canFinalize(): boolean {
     return this.contractForm.valid &&
       this.serviceOrders.length > 0 &&
-      this.assignedCoordinators.length > 0;
+      this.projectChCode.trim() !== '';
   }
 
   finalizeProject(): void {
@@ -1068,24 +1639,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     const projectDto = this.buildProjectDto();
-
-    // LOGGING COMPLETO
-    console.log('==========================================');
-    console.log('PROYECTO A ENVIAR AL BACKEND:');
-    console.log('==========================================');
-    console.log(JSON.stringify(projectDto, null, 2));
-    
-    projectDto.ServiceOrders.forEach((ods, odsIdx) => {
-      console.log(`ODS ${odsIdx + 1}: ${ods.OdsCode}`);
-      ods.SamplingPlans.forEach((plan, planIdx) => {
-        console.log(`  Plan ${planIdx + 1}: ${plan.PlanCode}`);
-        console.log(`    Fechas recursos: ${plan.Resources?.StartDate} - ${plan.Resources?.EndDate}`);
-        console.log(`    Vehiculos: ${JSON.stringify(plan.Resources?.VehicleIds)}`);
-        console.log(`    Empleados: ${JSON.stringify(plan.Resources?.EmployeeIds)}`);
-        console.log(`    Equipos: ${JSON.stringify(plan.Resources?.EquipmentIds)}`);
-      });
-    });
-    console.log('==========================================');
 
     this.projectCreationService.createCompleteProject(projectDto).subscribe({
       next: (result) => {
@@ -1109,43 +1662,41 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
 
   private calculatePlanBudgetTotals(budgetItems: BudgetItem[]) {
     const totals = {
-      CHCode: this.planForm.value.chCode || null,
-      TransportCostChemilab: 0,
-      TransportBilledToClient: 0,
-      LogisticsCostChemilab: 0,
-      LogisticsBilledToClient: 0,
-      SubcontractingCostChemilab: 0,
-      SubcontractingBilledToClient: 0,
-      FluvialTransportCostChemilab: 0,
-      FluvialTransportBilledToClient: 0,
-      ReportsCostChemilab: 0,
-      ReportsBilledToClient: 0,
-      Notes: this.planForm.value.notes || null
+      transportCostChemilab: 0,
+      transportBilledToClient: 0,
+      logisticsCostChemilab: 0,
+      logisticsBilledToClient: 0,
+      subcontractingCostChemilab: 0,
+      subcontractingBilledToClient: 0,
+      fluvialTransportCostChemilab: 0,
+      fluvialTransportBilledToClient: 0,
+      reportsCostChemilab: 0,
+      reportsBilledToClient: 0,
+      notes: this.planForm.value.notes || null
     };
 
     budgetItems.forEach(item => {
       const itemTotals = this.calculateItemTotal(item);
-
       switch (item.category) {
         case BudgetCategory.TRANSPORT:
-          totals.TransportCostChemilab += itemTotals.cost;
-          totals.TransportBilledToClient += itemTotals.billed;
+          totals.transportCostChemilab += itemTotals.cost;
+          totals.transportBilledToClient += itemTotals.billed;
           break;
         case BudgetCategory.LOGISTICS:
-          totals.LogisticsCostChemilab += itemTotals.cost;
-          totals.LogisticsBilledToClient += itemTotals.billed;
+          totals.logisticsCostChemilab += itemTotals.cost;
+          totals.logisticsBilledToClient += itemTotals.billed;
           break;
         case BudgetCategory.SUBCONTRACTING:
-          totals.SubcontractingCostChemilab += itemTotals.cost;
-          totals.SubcontractingBilledToClient += itemTotals.billed;
+          totals.subcontractingCostChemilab += itemTotals.cost;
+          totals.subcontractingBilledToClient += itemTotals.billed;
           break;
         case BudgetCategory.RIVER_TRANSPORT:
-          totals.FluvialTransportCostChemilab += itemTotals.cost;
-          totals.FluvialTransportBilledToClient += itemTotals.billed;
+          totals.fluvialTransportCostChemilab += itemTotals.cost;
+          totals.fluvialTransportBilledToClient += itemTotals.billed;
           break;
         case BudgetCategory.REPORTS:
-          totals.ReportsCostChemilab += itemTotals.cost;
-          totals.ReportsBilledToClient += itemTotals.billed;
+          totals.reportsCostChemilab += itemTotals.cost;
+          totals.reportsBilledToClient += itemTotals.billed;
           break;
       }
     });
@@ -1153,72 +1704,75 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     return totals;
   }
 
-
   private buildProjectDto(): CreateProject {
-  const contractData = this.contractForm.value;
+    const contractData = this.contractForm.value;
 
-  const serviceOrders = this.serviceOrders.map(ods => ({
-    OdsCode: ods.odsCode,
-    OdsName: ods.odsName,
-    StartDate: ods.startDate || null,
-    EndDate: ods.endDate || null,
-    SamplingPlans: ods.samplingPlans.map((plan: any) => {
-      
-      const resourceStartDate = plan.resources?.startDate;
-      const resourceEndDate = plan.resources?.endDate;
-      
-      console.log(`Plan ${plan.planCode} - Fechas recursos:`, {
-        startDate: resourceStartDate,
-        endDate: resourceEndDate,
-        hasResources: !!(plan.resources?.employeeIds?.length || 
-                        plan.resources?.equipmentIds?.length || 
-                        plan.resources?.vehicleIds?.length)
-      });
+    const serviceOrders = this.serviceOrders.map(ods => ({
+      odsCode: ods.odsCode,
+      odsName: ods.odsName || ods.odsCode,
+      startDate: ods.startDate || null,
+      endDate: ods.endDate || null,
+      samplingPlans: ods.samplingPlans.map((plan: any) => {
 
-      return {
-        PlanCode: plan.planCode,
-        StartDate: plan.startDate || null,
-        EndDate: plan.endDate || null,
-        Sites: plan.sites.map((site: any) => ({
-          Name: site.name,
-          MatrixId: site.matrixId,
-          ExecutionDate: site.executionDate || null,
-          HasReport: site.hasReport,
-          HasGDB: site.hasGDB,
-          IsSubcontracted: site.isSubcontracted,
-          SubcontractorName: site.isSubcontracted ? (site.subcontractorName?.trim() || null) : null
-        })),
+        return {
+          planCode: plan.planCode,
+          planName: plan.planName || plan.planCode,
+          startDate: plan.startDate || null,
+          endDate: plan.endDate || null,
+          coordinatorId: plan.coordinatorId,
+          sites: plan.sites.map((site: any) => ({
+            name: site.name,
+            matrixId: Array.isArray(site.matrixIds) ? site.matrixIds[0] : (site.matrixId || 0),
+            executionDate: site.executionDate || null,
+            hasReport: site.hasReport || false,
+            hasGDB: site.hasGDB || false
+          })),
+          resources: {
+            mode: plan.resourceAssignmentMode || 'QUANTITY',
+            startDate: plan.resourceStartDate || null,
+            endDate: plan.resourceEndDate || null,
+            locationId: null,
+            employeeIds: plan.resources?.employeeIds || [],
+            equipmentIds: plan.resources?.equipmentIds || [],
+            vehicleIds: plan.resources?.vehicleIds || [],
+            employeeQuantities: plan.employeeQuantities || [],
+            equipmentQuantities: plan.equipmentQuantities || [],
+            vehicleQuantity: plan.vehicleQuantity || 0
+          },
+          budget: this.calculatePlanBudgetTotals(plan.budget?.items || [])
+        };
+      })
+    }));
 
-        Resources: {
-          StartDate: resourceStartDate || null,
-          EndDate: resourceEndDate || null,
-          EmployeeIds: plan.resources?.employeeIds || [],
-          EquipmentIds: plan.resources?.equipmentIds || [],
-          VehicleIds: plan.resources?.vehicleIds || []
-        },
-        
-        Budget: this.calculatePlanBudgetTotals(plan.budget?.items || [])
-      };
-    })
-  }));
-
-  return {
-    Contract: {
-      ContractCode: contractData.contractCode,
-      ContractName: contractData.contractName || '',
-      ClientId: Number(contractData.clientId),
-      StartDate: contractData.startDate || null,
-      EndDate: contractData.endDate || null
-    },
-    ServiceOrders: serviceOrders,
-    CoordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
-    ProjectDetails: {
-      ProjectName: contractData.contractName || contractData.contractCode,
-      ProjectDescription: '',
-      Priority: 'media'
-    }
-  };
-}
+    return {
+      contract: {
+        contractCode: contractData.contractCode,
+        contractName: contractData.contractName || '',
+        clientId: Number(contractData.clientId),
+        startDate: contractData.startDate || null,
+        endDate: contractData.endDate || null
+      },
+      chCode: this.projectChCode,
+      serviceOrders: serviceOrders,
+      coordinatorIds: this.assignedCoordinators.map(c => c.coordinatorId),
+      projectDetails: {
+        projectName: contractData.contractName || contractData.contractCode,
+        projectDescription: '',
+        priority: 'media'
+      },
+      projectResourceAssignementMode: this.hasDetailedPlans() ? 1 : 0
+    };
+  }
+  
+  private hasDetailedPlans(): boolean {
+    return this.serviceOrders.some(ods =>
+      ods.samplingPlans.some((plan: any) =>
+        plan.resourceAssignmentMode === 'DETAILED' ||
+        plan.resourceAssignmentMode === ResourceAssignmentMode.DETAILED
+      )
+    );
+  } 
+  
 
   createAnotherProject(): void {
     this.router.navigate(['/projects/new']);
@@ -1228,7 +1782,6 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   goToDashboard(): void {
     this.router.navigate(['/projects-dashboard']);
   }
-
 
   get getClientName(): string {
     const clientId = this.contractForm.value.clientId;
@@ -1263,14 +1816,9 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
     return Math.round((completed / total) * 100);
   }
 
-  // Categorías de presupuesto para el select
   get budgetCategories() {
     return Object.values(BudgetCategory);
   }
-
-  // ==========================================
-  // GETTERS PARA EL TEMPLATE
-  // ==========================================
 
   get hasAnyPlans(): boolean {
     return this.serviceOrders.some(ods => ods.samplingPlans.length > 0);
@@ -1279,4 +1827,233 @@ export class ProjectWizardComponent implements OnInit, OnDestroy {
   get totalPlansCount(): number {
     return this.serviceOrders.reduce((total, ods) => total + ods.samplingPlans.length, 0);
   }
+
+  setResourceMode(mode: ResourceAssignmentMode): void {
+
+    if (this.editingPlanId && mode === ResourceAssignmentMode.QUANTITY) {
+
+      this.errorMessage = 'No se puede cambiar de modo detallado a cantidad una vez asignados los recursos específicos';
+
+      setTimeout(() => this.errorMessage = '', 3000);
+
+      return;
+
+    }
+
+    this.currentResourceMode = mode;
+
+    this.planForm.patchValue({ resourceAssignmentMode: mode });
+
+    if (mode === ResourceAssignmentMode.DETAILED) {
+
+      this.loadRequiredResourcesFromQuantities();
+
+      const startDate = this.planForm.value.resourceStartDate;
+
+      const endDate = this.planForm.value.resourceEndDate;
+
+      if (startDate && endDate) {
+
+        this.loadAvailableResources();
+
+      }
+
+    }
+
+    this.formChanges$.next();
+  }
+
+  addEmployeeQuantity(): void {
+    this.employeeQuantities.push({ categoryName: '', quantity: 1 });
+    this.updateEmployeeQuantitiesInForm();
+  }
+
+  removeEmployeeQuantity(index: number): void {
+    this.employeeQuantities.splice(index, 1);
+    this.updateEmployeeQuantitiesInForm();
+  }
+
+  updateEmployeeQuantitiesInForm(): void {
+    this.planForm.patchValue({ employeeQuantities: [...this.employeeQuantities] });
+    this.formChanges$.next();
+  }
+
+  addEquipmentQuantity(): void {
+    this.equipmentQuantities.push({ categoryName: '', quantity: 1 });
+    this.updateEquipmentQuantitiesInForm();
+  }
+
+  removeEquipmentQuantity(index: number): void {
+    this.equipmentQuantities.splice(index, 1);
+    this.updateEquipmentQuantitiesInForm();
+  }
+
+  updateEquipmentQuantitiesInForm(): void {
+    this.planForm.patchValue({ equipmentQuantities: [...this.equipmentQuantities] });
+    this.formChanges$.next();
+  }
+
+  updateVehicleQuantity(): void {
+    this.planForm.patchValue({ vehicleQuantity: this.vehicleQuantity });
+    this.formChanges$.next();
+  }
+
+  getTotalRequiredEmployees(): number {
+    if (!this.planRequiredResources) return 0;
+    return this.planRequiredResources.employeeQuantities
+      .reduce((sum, eq) => sum + eq.quantity, 0);
+  }
+
+  getTotalRequiredEquipment(): number {
+    if (!this.planRequiredResources) return 0;
+    return this.planRequiredResources.equipmentQuantities
+      .reduce((sum, eq) => sum + eq.quantity, 0);
+  }
+
+  getSelectionProgress(type: 'employees' | 'equipment' | 'vehicles'): number {
+    if (!this.planRequiredResources) return 0;
+    let selected = 0, required = 0;
+
+    switch (type) {
+      case 'employees':
+        selected = this.planForm.value.selectedEmployeeIds?.length || 0;
+        required = this.getTotalRequiredEmployees();
+        break;
+      case 'equipment':
+        selected = this.planForm.value.selectedEquipmentIds?.length || 0;
+        required = this.getTotalRequiredEquipment();
+        break;
+      case 'vehicles':
+        selected = this.planForm.value.selectedVehicleIds?.length || 0;
+        required = this.planRequiredResources.vehicleQuantity || 0;
+        break;
+    }
+
+    if (required === 0) return selected > 0 ? 100 : 0;
+    return Math.min((selected / required) * 100, 100);
+  }
+
+
+  get hasRequiredEmployees(): boolean {
+    return !!this.planRequiredResources?.employeeQuantities?.length;
+  }
+
+  get hasRequiredEquipment(): boolean {
+    return !!this.planRequiredResources?.equipmentQuantities?.length;
+  }
+
+  get hasRequiredVehicles(): boolean {
+    return this.planRequiredResources?.vehicleQuantity ? this.planRequiredResources.vehicleQuantity > 0 : false;
+  }
+  loadRequiredResourcesFromQuantities() {
+    const mode = this.planForm.value.resourceAssignmentMode;
+
+    if (mode === ResourceAssignmentMode.DETAILED && !this.planRequiredResources) {
+
+      const employeeQtys = this.employeeQuantities.filter(eq => eq.categoryName && eq.quantity > 0);
+      const equipmentQtys = this.equipmentQuantities.filter(eq => eq.categoryName && eq.quantity > 0);
+      const vehicleQty = this.vehicleQuantity || 0;
+
+      if (employeeQtys.length > 0 || equipmentQtys.length > 0 || vehicleQty > 0) {
+        this.planRequiredResources = {
+          employeeQuantities: employeeQtys,
+          equipmentQuantities: equipmentQtys,
+          vehicleQuantity: vehicleQty
+        };
+        console.log('Recursos requeridos cargados desde cantidades:', this.planRequiredResources);
+      } else {
+        this.planRequiredResources = null;
+        console.log('No hay recursos por cantidad definidos');
+      }
+    }
+  }
+
+  loadRequiredResourcesFromPlan(plan: any) {
+    if (plan.employeeQuantities?.length > 0 ||
+      plan.equipmentQuantities?.length > 0 ||
+      plan.vehicleQuantity > 0) {
+
+      this.planRequiredResources = {
+        employeeQuantities: plan.employeeQuantities || [],
+        equipmentQuantities: plan.equipmentQuantities || [],
+        vehicleQuantity: plan.vehicleQuantity || 0
+      };
+
+    }
+    else if (plan.resources) {
+      if (plan.resources.mode === ResourceAssignmentMode.QUANTITY) {
+        this.planRequiredResources = {
+          employeeQuantities: plan.resources.employeeQuantities || [],
+          equipmentQuantities: plan.resources.equipmentQuantities || [],
+          vehicleQuantity: plan.resources.vehicleQuantity || 0
+        };
+      } else {
+        const employeeCount = plan.resources.employeeIds?.length || 0;
+        const equipmentCount = plan.resources.equipmentIds?.length || 0;
+        const vehicleCount = plan.resources.vehicleIds?.length || 0;
+
+        this.planRequiredResources = {
+          employeeQuantities: employeeCount > 0 ? [{ categoryName: 'Personal', quantity: employeeCount }] : [],
+          equipmentQuantities: equipmentCount > 0 ? [{ categoryName: 'Equipos', quantity: equipmentCount }] : [],
+          vehicleQuantity: vehicleCount
+        };
+      }
+    }
+  }
+  
+  
+  saveDetailedResourcesAndExit(): void {
+  if (!this.editingPlanId) {
+    this.errorMessage = 'Error: No hay un plan en edición';
+    return;
+  }
+
+  const selectedEmployees = this.planForm.value.selectedEmployeeIds || [];
+  
+  if (selectedEmployees.length === 0) {
+    this.errorMessage = 'Debe seleccionar al menos un empleado';
+    return;
+  }
+
+  const dto = {
+    mode: 'DETAILED',
+    startDate: this.planForm.value.resourceStartDate || null,
+    endDate: this.planForm.value.resourceEndDate || null,
+    employeeIds: selectedEmployees,
+    equipmentIds: this.planForm.value.selectedEquipmentIds || [],
+    vehicleIds: this.planForm.value.selectedVehicleIds || [],
+    employeeQuantities: null,
+    equipmentQuantities: null,
+    vehicleQuantity: null
+  };
+
+  console.log('DTO enviado:', JSON.stringify(dto, null, 2));
+
+  this.loading = true;
+
+  this.projectCreationService.updatePlanResources(this.editingPlanId, dto).subscribe({
+    next: (response) => {
+      this.successMessage = '✅ Recursos asignados exitosamente';
+      this.loading = false;
+      setTimeout(() => this.router.navigate(['/projects-dashboard']), 1500);
+    },
+    error: (error) => {
+      console.error('❌ Error completo:', error);
+      console.error('❌ Error.error:', error.error);
+      console.error('❌ Errores de validación:', error.error?.errors); // 👈 IMPORTANTE
+      console.error('❌ Status:', error.status);
+      
+      // Mostrar errores de validación
+      if (error.error?.errors) {
+        console.error('📋 DETALLES DE VALIDACIÓN:');
+        Object.keys(error.error.errors).forEach(key => {
+          console.error(`  - ${key}:`, error.error.errors[key]);
+        });
+      }
+      
+      this.errorMessage = error.error?.message || 'Error al actualizar recursos';
+      this.loading = false;
+    }
+  });
+}
 }

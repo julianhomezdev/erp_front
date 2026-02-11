@@ -1,0 +1,314 @@
+<div class="space-y-6">
+  <!-- Estado de carga -->
+  <div *ngIf="loading" class="text-center py-8">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
+    <p class="text-sm text-gray-600">Cargando datos del plan...</p>
+  </div>
+
+  <!-- Formulario de edición -->
+  <div *ngIf="!loading && plan" class="space-y-6">
+    
+    <!-- Información del plan -->
+    <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+      <h4 class="font-medium text-gray-900 mb-1">{{ plan.planCode }} - {{ plan.planName || 'Sin nombre' }}</h4>
+      <p class="text-sm text-gray-600">
+        Coordinador: {{ plan.coordinator?.name || 'No asignado' }}
+      </p>
+    </div>
+
+    <!-- Fechas de recursos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          Fecha Inicio Recursos <span class="text-red-600">*</span>
+        </label>
+        <input type="date" [(ngModel)]="startDate"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+               (change)="loadAvailableResources()">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          Fecha Fin Recursos <span class="text-red-600">*</span>
+        </label>
+        <input type="date" [(ngModel)]="endDate"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+               (change)="loadAvailableResources()">
+      </div>
+    </div>
+
+    <!-- Selector de modo -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Modo de Asignación</label>
+      <div class="flex gap-2">
+        <button type="button" (click)="resourceMode = 'QUANTITY'"
+                [class]="'flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ' + 
+                (resourceMode === 'QUANTITY' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
+          📊 Por Cantidad
+        </button>
+
+        <button type="button" (click)="resourceMode = 'DETAILED'"
+                [class]="'flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ' + 
+                (resourceMode === 'DETAILED' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
+          👥 Detallado
+        </button>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">
+        <span *ngIf="resourceMode === 'QUANTITY'">Especifique cantidades por categoría</span>
+        <span *ngIf="resourceMode === 'DETAILED'">Seleccione recursos específicos</span>
+      </p>
+    </div>
+
+    <!-- MODO CANTIDAD -->
+    <div *ngIf="resourceMode === 'QUANTITY'" class="space-y-6">
+
+      <!-- Personal por categoría -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <label class="block text-sm font-medium text-gray-700">Personal</label>
+          <button type="button" (click)="addEmployeeQuantity()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700">
+            + Agregar Categoría
+          </button>
+        </div>
+
+        <div *ngIf="employeeQuantities.length === 0" 
+             class="bg-gray-50 border border-gray-200 rounded-md p-4 text-center">
+          <p class="text-sm text-gray-600">No hay categorías de personal agregadas</p>
+        </div>
+
+        <div *ngIf="employeeQuantities.length > 0" class="space-y-3">
+          <div *ngFor="let item of employeeQuantities; let idx = index" 
+               class="bg-gray-50 border border-gray-200 rounded-md p-3">
+            <div class="flex gap-3 items-start">
+              <div class="flex-1">
+                <label class="block text-xs text-gray-600 mb-1">Categoría</label>
+                <select [(ngModel)]="item.categoryName" 
+                        class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500">
+                  <option value="">Seleccione categoría</option>
+                  <option *ngFor="let cat of employeeCategories" [value]="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <div class="w-28">
+                <label class="block text-xs text-gray-600 mb-1">Cantidad</label>
+                <input type="number" [(ngModel)]="item.quantity" min="1"
+                       class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500">
+              </div>
+
+              <button type="button" (click)="removeEmployeeQuantity(idx)"
+                      class="mt-6 text-gray-400 hover:text-red-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipos por categoría -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <label class="block text-sm font-medium text-gray-700">Equipos</label>
+          <button type="button" (click)="addEquipmentQuantity()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700">
+            + Agregar Categoría
+          </button>
+        </div>
+
+        <div *ngIf="equipmentQuantities.length === 0" 
+             class="bg-gray-50 border border-gray-200 rounded-md p-4 text-center">
+          <p class="text-sm text-gray-600">No hay categorías de equipos agregadas</p>
+        </div>
+
+        <div *ngIf="equipmentQuantities.length > 0" class="space-y-3">
+          <div *ngFor="let item of equipmentQuantities; let idx = index" 
+               class="bg-gray-50 border border-gray-200 rounded-md p-3">
+            <div class="flex gap-3 items-start">
+              <div class="flex-1">
+                <label class="block text-xs text-gray-600 mb-1">Categoría</label>
+                <select [(ngModel)]="item.categoryName" 
+                        class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500">
+                  <option value="">Seleccione categoría</option>
+                  <option *ngFor="let cat of equipmentCategories" [value]="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <div class="w-28">
+                <label class="block text-xs text-gray-600 mb-1">Cantidad</label>
+                <input type="number" [(ngModel)]="item.quantity" min="1"
+                       class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500">
+              </div>
+
+              <button type="button" (click)="removeEquipmentQuantity(idx)"
+                      class="mt-6 text-gray-400 hover:text-red-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vehículos -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Vehículos</label>
+        <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-700">Cantidad de vehículos necesarios:</span>
+            <input type="number" [(ngModel)]="vehicleQuantity" min="0"
+                   class="w-24 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MODO DETALLADO -->
+    <div *ngIf="resourceMode === 'DETAILED'" class="space-y-6">
+
+      <!-- Mensaje si no hay fechas -->
+      <div *ngIf="!startDate || !endDate" class="bg-amber-50 border border-amber-200 rounded-md p-4">
+        <p class="text-sm text-amber-800">
+          ⚠️ Configure las fechas de recursos para ver disponibilidad
+        </p>
+      </div>
+
+      <!-- Personal detallado -->
+      <div *ngIf="startDate && endDate">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Personal</label>
+        
+        <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+          <div *ngIf="availableEmployees.length === 0" class="text-center py-4">
+            <p class="text-sm text-gray-600">No hay empleados disponibles</p>
+          </div>
+          
+          <div *ngFor="let employee of availableEmployees" class="py-1.5">
+            <label class="flex items-center cursor-pointer hover:bg-white rounded px-2 py-1 transition-colors"
+                   [class.opacity-50]="!employee.isAvailable"
+                   [class.cursor-not-allowed]="!employee.isAvailable">
+              
+              <input type="checkbox" 
+                     [checked]="selectedEmployeeIds.includes(employee.id)"
+                     (change)="toggleEmployeeSelection(employee.id)"
+                     [disabled]="!employee.isAvailable"
+                     class="w-4 h-4 rounded text-blue-600 border-gray-300">
+              
+              <div class="ml-3 flex-1">
+                <span class="text-sm font-medium" 
+                      [class.text-gray-900]="employee.isAvailable"
+                      [class.text-gray-400]="!employee.isAvailable">
+                  {{ employee.name }}
+                </span>
+                <span class="ml-2 text-xs text-gray-500">{{ employee.position }}</span>
+                <span *ngIf="!employee.isAvailable" class="ml-2 text-xs text-red-600">No disponible</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ selectedEmployeeIds.length }} seleccionados</p>
+      </div>
+
+      <!-- Equipos detallados -->
+      <div *ngIf="startDate && endDate">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Equipos</label>
+        
+        <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+          <div *ngIf="availableEquipment.length === 0" class="text-center py-4">
+            <p class="text-sm text-gray-600">No hay equipos disponibles</p>
+          </div>
+          
+          <div *ngFor="let equipment of availableEquipment" class="py-1.5">
+            <label class="flex items-center cursor-pointer hover:bg-white rounded px-2 py-1 transition-colors"
+                   [class.opacity-50]="!equipment.isAvailable"
+                   [class.cursor-not-allowed]="!equipment.isAvailable">
+              
+              <input type="checkbox" 
+                     [checked]="selectedEquipmentIds.includes(equipment.id)"
+                     (change)="toggleEquipmentSelection(equipment.id)"
+                     [disabled]="!equipment.isAvailable"
+                     class="w-4 h-4 rounded text-blue-600 border-gray-300">
+              
+              <div class="ml-3 flex-1">
+                <span class="text-sm font-medium" 
+                      [class.text-gray-900]="equipment.isAvailable"
+                      [class.text-gray-400]="!equipment.isAvailable">
+                  {{ equipment.name }} ({{ equipment.code }})
+                </span>
+                <span class="ml-2 text-xs text-gray-500">{{ equipment.category }}</span>
+                <span *ngIf="!equipment.isAvailable" class="ml-2 text-xs text-red-600">No disponible</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ selectedEquipmentIds.length }} seleccionados</p>
+      </div>
+
+      <!-- Vehículos detallados -->
+      <div *ngIf="startDate && endDate">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Vehículos</label>
+        
+        <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+          <div *ngIf="availableVehicles.length === 0" class="text-center py-4">
+            <p class="text-sm text-gray-600">No hay vehículos disponibles</p>
+          </div>
+          
+          <div *ngFor="let vehicle of availableVehicles" class="py-1.5">
+            <label class="flex items-center cursor-pointer hover:bg-white rounded px-2 py-1 transition-colors"
+                   [class.opacity-50]="!vehicle.isAvailable"
+                   [class.cursor-not-allowed]="!vehicle.isAvailable">
+              
+              <input type="checkbox" 
+                     [checked]="selectedVehicleIds.includes(vehicle.id)"
+                     (change)="toggleVehicleSelection(vehicle.id)"
+                     [disabled]="!vehicle.isAvailable"
+                     class="w-4 h-4 rounded text-blue-600 border-gray-300">
+              
+              <div class="ml-3 flex-1">
+                <span class="text-sm font-medium" 
+                      [class.text-gray-900]="vehicle.isAvailable"
+                      [class.text-gray-400]="!vehicle.isAvailable">
+                  {{ vehicle.plateNumber }}
+                </span>
+                <span class="ml-2 text-xs text-gray-500">{{ vehicle.brand }} {{ vehicle.model }}</span>
+                <span *ngIf="!vehicle.isAvailable" class="ml-2 text-xs text-red-600">No disponible</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ selectedVehicleIds.length }} seleccionados</p>
+      </div>
+
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <button type="button" (click)="cancel()"
+              class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors">
+        Cancelar
+      </button>
+      
+      <button type="button" (click)="saveResources()" 
+              [disabled]="loading || (!startDate || !endDate)"
+              class="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        <span *ngIf="loading" class="flex items-center">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          Guardando...
+        </span>
+        <span *ngIf="!loading">Guardar Cambios</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Mensaje si no se encuentra el plan -->
+  <div *ngIf="!loading && !plan" class="text-center py-8">
+    <p class="text-gray-600">No se encontró el plan de muestreo</p>
+    <button (click)="cancel()" class="mt-4 text-blue-600 hover:text-blue-800 font-medium">
+      Volver
+    </button>
+  </div>
+
+</div>

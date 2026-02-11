@@ -11,6 +11,7 @@ export interface Vehicle {
     costPerDay?: number;
     supplierId?: number;
     locationId?: number;
+    location: string;
     assignments: VehicleAssignment[];
 }
 

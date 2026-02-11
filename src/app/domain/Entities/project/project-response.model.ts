@@ -2,7 +2,7 @@ import { Client } from "../client/client.model";
 import { Contract } from "../contract/contract.model";
 import { Coordinator } from "../coordinator/coordinator.model";
 import { EmployeeAssignmentResponse } from "../employee/employee-assignment-response.model";
-import { OrderService } from "../order-service/order-service.model";
+import { OrderService } from "../orderService/order-service.model";
 import { VehicleAssignmentResponse } from "../vehicle/vehicle-assignment-response.model";
 import { ProjectBudgetResponse } from "./project-budget-response.model";
 
